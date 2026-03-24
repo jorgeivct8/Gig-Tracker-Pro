@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GigTracker Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;--surface3:#e8e6de;
+  --border:#dddbd2;--border2:#c8c5ba;
+  --text:#1a1916;--text2:#6b6860;--text3:#a09e97;
+  --spark:#e07b00;--spark-bg:#fff3e0;
+  --flex:#1565c0;--flex-bg:#e3f0ff;
+  --door:#c62828;--door-bg:#ffeaea;
+  --other:#5e35b1;--other-bg:#f0ecff;
+  --green:#2e7d32;--red:#c62828;
+  --font-ui:'Epilogue',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+  --r:8px;--r-lg:12px;
+}
+html{font-size:15px}
+body{background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100vh;display:flex;flex-direction:column}
+.shell{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:210px;min-height:100vh;background:var(--text);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-mark{font-family:var(--font-ui);font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.logo-mark em{font-style:normal;color:rgba(255,255,255,.4);font-weight:400}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.3);margin-top:3px;font-family:var(--font-mono)}
+.snav{padding:14px 10px;flex:1}
+.snav-label{font-size:10px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.1em;padding:14px 10px 6px;font-family:var(--font-mono)}
+.snav-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,.45);font-size:13px;font-family:var(--font-ui);font-weight:500;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.snav-btn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.8)}
+.snav-btn.active{background:rgba(255,255,255,.12);color:#fff}
+.snav-btn svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.snav-btn.active svg{opacity:1}
+.sidebar-foot{padding:16px;border-top:1px solid rgba(255,255,255,.08)}
+.sidebar-foot strong{display:block;font-size:13px;color:#fff;margin-bottom:2px}
+.sidebar-foot span{font-size:11px;color:rgba(255,255,255,.3);font-family:var(--font-mono)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;padding:32px 36px;max-width:960px}
+.page{display:none}.page.active{display:block}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px}
+.ph-title{font-family:var(--font-ui);font-size:24px;font-weight:700;letter-spacing:-.02em}
+.ph-sub{font-size:12px;color:var(--text3);margin-top:3px;font-family:var(--font-mono)}
+
+/* METRICS */
+.mg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px}
+.mc.featured{border-color:var(--text);border-width:1.5px}
+.mc-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-family:var(--font-mono)}
+.mc-value{font-family:var(--font-ui);font-size:22px;font-weight:700;letter-spacing:-.02em}
+.mc-value.g{color:var(--green)}.mc-value.r{color:var(--red)}
+.mc-sub{font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--font-mono)}
+
+/* INDEX CARDS */
+.idx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.idx-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px;position:relative;overflow:hidden}
+.idx-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.idx-card.year::after{background:#9e9e9e}
+.idx-card.worked::after{background:var(--green)}
+.idx-card.off::after{background:#e0e0e0}
+.idx-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-family:var(--font-mono)}
+.idx-value{font-family:var(--font-ui);font-size:28px;font-weight:700;letter-spacing:-.02em}
+.idx-card.worked .idx-value{color:var(--green)}
+.idx-sub{font-size:11px;color:var(--text3);margin-top:4px;font-family:var(--font-mono)}
+.idx-bar{height:4px;background:var(--surface3);border-radius:2px;margin-top:10px;overflow:hidden}
+.idx-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px}
+.card-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:600}
+.card-body{padding:18px}
+
+/* PLATFORM BARS */
+.plat-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.plat-row:last-child{border-bottom:none}
+.plat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.plat-name{font-size:13px;color:var(--text2);width:115px;flex-shrink:0;font-family:var(--font-mono)}
+.plat-bar-wrap{flex:1;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.plat-bar{height:100%;border-radius:2px;transition:width .4s ease}
+.plat-amount{font-size:13px;font-weight:600;width:78px;text-align:right;flex-shrink:0}
+.plat-pct{font-size:11px;color:var(--text3);width:32px;text-align:right;flex-shrink:0;font-family:var(--font-mono)}
+
+/* FORM */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fgroup{display:flex;flex-direction:column;gap:5px}
+.fgroup.full{grid-column:1/-1}
+.flabel{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-mono);font-weight:500}
+.finput,.fselect,.ftextarea{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;color:var(--text);font-family:var(--font-mono);font-size:13px;transition:border-color .15s;width:100%}
+.finput:focus,.fselect:focus,.ftextarea:focus{outline:none;border-color:var(--text)}
+.finput::placeholder{color:var(--text3)}
+.ftextarea{resize:vertical;min-height:70px}
+.iprefix{position:relative}
+.iprefix .pfx{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+.iprefix .finput{padding-left:22px}
+.plat-ig{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.pic{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.pic-hd{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-family:var(--font-mono)}
+.fsec{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin:20px 0 10px;padding-bottom:7px;border-bottom:1px solid var(--border);font-family:var(--font-mono)}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:var(--r);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--text);color:#fff}.btn-primary:hover{background:#333}.btn-primary:active{transform:scale(.98)}
+.btn-secondary{background:var(--surface);color:var(--text2);border:1px solid var(--border)}.btn-secondary:hover{border-color:var(--border2);color:var(--text)}
+.btn-edit{background:var(--flex-bg);color:var(--flex);border:none;padding:4px 9px;font-size:11px;border-radius:var(--r);cursor:pointer;font-family:var(--font-mono);font-weight:500}
+.btn-edit:hover{background:#cce0ff}
+.btn-del{background:#ffeaea;color:var(--red);border:none;padding:4px 9px;font-size:11px;border-radius:var(--r);cursor:pointer;font-family:var(--font-mono);font-weight:500}
+.btn-del:hover{background:#ffd0d0}
+
+/* TABLE */
+.etable{width:100%;border-collapse:collapse}
+.etable th{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-weight:500}
+.etable td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;font-family:var(--font-mono)}
+.etable tr:last-child td{border-bottom:none}
+.etable tbody tr:hover td{background:var(--bg)}
+
+/* TAGS */
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;margin:1px;font-family:var(--font-mono)}
+.ts{background:var(--spark-bg);color:var(--spark)}.tf{background:var(--flex-bg);color:var(--flex)}
+.td{background:var(--door-bg);color:var(--door)}.to{background:var(--other-bg);color:var(--other)}
+.tg{background:#e8f5e9;color:#2e7d32}
+
+/* WEEK ACCORDION */
+.wacc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:10px;overflow:hidden}
+.wacc-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;cursor:pointer;transition:background .15s}
+.wacc-hd:hover{background:var(--bg)}
+.wacc-chev{font-size:11px;color:var(--text3);margin-left:10px;transition:transform .2s;display:inline-block}
+.wacc-hd.open .wacc-chev{transform:rotate(180deg)}
+.wacc-body{display:none;border-top:1px solid var(--border)}
+.wacc-body.open{display:block}
+.wsg{display:grid;grid-template-columns:repeat(3,1fr)}
+.ws{padding:13px 18px;border-right:1px solid var(--border)}
+.ws:last-child{border-right:none}
+.wsl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;font-family:var(--font-mono)}
+.wsv{font-size:14px;font-weight:600}
+
+/* PLATFORM SUMMARY CARDS */
+.psg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.psc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;border-top:3px solid transparent}
+.psc.spark{border-top-color:var(--spark)}.psc.flex{border-top-color:var(--flex)}
+.psc.door{border-top-color:var(--door)}.psc.other{border-top-color:var(--other)}
+.psc-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;font-family:var(--font-mono)}
+.psc-v{font-size:20px;font-weight:700}
+.psc.spark .psc-v{color:var(--spark)}.psc.flex .psc-v{color:var(--flex)}
+.psc.door .psc-v{color:var(--door)}.psc.other .psc-v{color:var(--other)}
+
+/* EXPENSE ROWS */
+.exp-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.exp-row:last-child{border-bottom:none}
+.exp-name{font-size:13px;color:var(--text2);font-family:var(--font-mono)}
+.exp-amt{font-size:13px;font-weight:600;color:var(--red);font-family:var(--font-mono)}
+.exp-pct{font-size:11px;color:var(--text3);margin-left:6px;font-family:var(--font-mono)}
+
+/* GOAL BAR */
+.goal-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px 18px}
+.goal-bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin:8px 0 5px}
+.goal-bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,25,22,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:15px;font-weight:600}
+.modal-body{padding:20px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
+
+/* QUICK MODAL TYPE TOGGLE */
+.type-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.type-btn{padding:12px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg);cursor:pointer;font-family:var(--font-mono);font-size:13px;font-weight:600;text-align:center;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.type-btn.income.active{border-color:var(--green);background:#edf7ee;color:var(--green)}
+.type-btn.expense.active{border-color:var(--red);background:#ffeaea;color:var(--red)}
+
+/* PLAT SELECTOR */
+.plat-sel{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.plat-btn{padding:10px;border:1.5px solid var(--border);border-radius:var(--r);background:var(--bg);cursor:pointer;font-family:var(--font-mono);font-size:12px;font-weight:600;transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:center}
+.plat-btn.active-spark{border-color:var(--spark);background:var(--spark-bg);color:var(--spark)}
+.plat-btn.active-flex{border-color:var(--flex);background:var(--flex-bg);color:var(--flex)}
+.plat-btn.active-door{border-color:var(--door);background:var(--door-bg);color:var(--door)}
+.plat-btn.active-other{border-color:var(--other);background:var(--other-bg);color:var(--other)}
+
+/* DAY EVENTS LIST */
+.day-group{margin-bottom:12px}
+.day-group-header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.day-group-date{font-size:12px;font-weight:600;color:var(--text)}
+.day-group-summary{font-size:11px;color:var(--text3);font-family:var(--font-mono)}
+.day-event-row{display:flex;align-items:center;gap:12px;padding:9px 18px;border-bottom:1px solid var(--border)}
+.day-event-row:last-child{border-bottom:none}
+.day-event-row:hover{background:var(--bg)}
+.day-event-cat{font-size:12px;font-family:var(--font-mono);flex:1}
+.day-event-amt{font-size:13px;font-weight:600;font-family:var(--font-mono)}
+
+/* VEHICLE */
+.maint-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;font-family:var(--font-mono)}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty svg{width:34px;height:34px;margin:0 auto 10px;opacity:.2;display:block}
+.empty p{font-size:13px;font-family:var(--font-mono)}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--text);color:#fff;padding:11px 18px;border-radius:var(--r);font-size:13px;font-weight:500;transform:translateY(70px);opacity:0;transition:all .25s;z-index:9999;font-family:var(--font-mono)}
+.toast.show{transform:translateY(0);opacity:1}
+.chart-wrap{position:relative;width:100%}
+
+/* MOBILE NAV */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--text);border-top:1px solid rgba(255,255,255,.1);z-index:100;padding:6px 0 0}
+.mobile-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:rgba(255,255,255,.4);font-size:11px;font-family:var(--font-ui);font-weight:500;cursor:pointer;padding:8px 4px 0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.mobile-nav button:active{background:rgba(255,255,255,.08)}
+.mobile-nav button.active{color:#fff}
+.mobile-nav button svg{width:22px;height:22px}
+.mobile-nav button::after{content:'';display:block;height:env(safe-area-inset-bottom,16px);min-height:16px}
+
+#desktop-fab{position:fixed;bottom:28px;right:28px;width:52px;height:52px;border-radius:50%;background:var(--text);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:90;transition:transform .15s}
+#desktop-fab:hover{transform:scale(1.08)}
+
+@media(max-width:700px){
+  #desktop-fab{display:none !important}
+  .sidebar{display:none}
+  .main{padding:18px 14px calc(90px + env(safe-area-inset-bottom,16px))}
+  .mg{grid-template-columns:repeat(2,1fr)}
+  .idx-grid{grid-template-columns:repeat(2,1fr)}
+  .plat-ig{grid-template-columns:repeat(2,1fr)}
+  .fg{grid-template-columns:1fr}
+  .wsg{grid-template-columns:1fr 1fr}
+  .psg{grid-template-columns:1fr}
+  .mobile-nav{display:flex}
+  .two-col{grid-template-columns:1fr !important}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">GigTracker <em>Pro</em></div>
+    <div class="logo-sub">control financiero</div>
+  </div>
+  <nav class="snav">
+    <div class="snav-label">Panel</div>
+    <button class="snav-btn active" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Resumen
+    </button>
+    <div class="snav-label">Registros</div>
+    <button class="snav-btn" onclick="showPage('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2v0a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Historial
+    </button>
+    <button class="snav-btn" onclick="showPage('expenses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+      Gastos
+    </button>
+    <div class="snav-label">Análisis</div>
+    <button class="snav-btn" onclick="showPage('weekly')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Por semana
+    </button>
+    <button class="snav-btn" onclick="showPage('stats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Estadísticas
+    </button>
+    <div class="snav-label">Vehículo</div>
+    <button class="snav-btn" onclick="showPage('vehicle')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3v-4l2-5h14l2 5v4h-2M5 17a2 2 0 104 0M15 17a2 2 0 104 0"/></svg>
+      Mantenimiento
+    </button>
+    <div class="snav-label">Config</div>
+    <button class="snav-btn" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Configuración
+    </button>
+  </nav>
+  <div class="sidebar-foot">
+    <strong id="foot-gross">—</strong>
+    <span id="foot-sub">semana actual</span>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div id="drive-status" style="font-size:10px;font-family:var(--font-mono);color:rgba(255,255,255,.3)">Sin conexion a Drive</div>
+        <button id="sync-btn" onclick="syncFromDrive()" style="display:none;background:none;border:none;color:rgba(255,255,255,.4);font-size:12px;cursor:pointer;padding:0;font-family:var(--font-mono)" title="Sincronizar">↻</button>
+      </div>
+      <button id="drive-signin-btn" onclick="signInDrive()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:11px;font-family:var(--font-mono);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="12" height="12" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Conectar con Drive
+      </button>
+      <button id="drive-signout-btn" onclick="signOutDrive()" style="width:100%;padding:6px 10px;background:none;border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.3);font-size:10px;font-family:var(--font-mono);cursor:pointer;display:none;margin-top:4px">Desconectar Drive</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <!-- REMINDER BANNER -->
+    <div id="reminder-banner" style="display:none;background:#fff3e0;border:1px solid #f5a623;border-radius:var(--r-lg);padding:12px 16px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">⏰</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#e07b00" id="reminder-title">No has registrado hoy</div>
+          <div style="font-size:11px;color:#6b6860;font-family:var(--font-mono)" id="reminder-sub">Último registro hace más de 24h</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button onclick="openQuickModal()" style="padding:6px 14px;background:#e07b00;color:#fff;border:none;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-ui)">Registrar</button>
+        <button onclick="dismissReminder()" style="padding:6px 10px;background:none;border:1px solid #f5a623;border-radius:var(--r);font-size:12px;color:#e07b00;cursor:pointer;font-family:var(--font-mono)">✕</button>
+      </div>
+    </div>
+    <div class="ph">
+      <div><div class="ph-title">Resumen</div><div class="ph-sub" id="dash-wk-label">—</div></div>
+    </div>
+    <div class="idx-grid">
+      <div class="idx-card year"><div class="idx-label">Días del año</div><div class="idx-value" id="idx-year">—</div><div class="idx-sub">transcurridos en 2026</div><div class="idx-bar"><div class="idx-bar-fill" id="idx-year-bar" style="background:#bdbdbd"></div></div></div>
+      <div class="idx-card worked"><div class="idx-label">Días trabajados</div><div class="idx-value" id="idx-worked">—</div><div class="idx-sub" id="idx-worked-sub">—</div><div class="idx-bar"><div class="idx-bar-fill" id="idx-worked-bar" style="background:var(--green)"></div></div></div>
+      <div class="idx-card off"><div class="idx-label">Días libres</div><div class="idx-value" id="idx-off">—</div><div class="idx-sub" id="idx-off-sub">—</div><div class="idx-bar"><div class="idx-bar-fill" id="idx-off-bar" style="background:#bdbdbd"></div></div></div>
+    </div>
+    <div class="mg">
+      <div class="mc featured"><div class="mc-label">Bruto hoy</div><div class="mc-value" id="d-gross-today">$0.00</div><div class="mc-sub" id="d-sub-today">sin registros</div></div>
+      <div class="mc"><div class="mc-label">Bruto esta semana</div><div class="mc-value" id="d-gross-week">$0.00</div><div class="mc-sub" id="d-days-week">0 días trabajados</div></div>
+      <div class="mc"><div class="mc-label">Gastos semana</div><div class="mc-value r" id="d-exp-week">$0.00</div><div class="mc-sub">todas las categorías</div></div>
+      <div class="mc"><div class="mc-label">Millas esta semana</div><div class="mc-value" id="d-miles-week">0</div><div class="mc-sub" id="d-miles-sub">acumulado semanal</div></div>
+    </div>
+    <div id="dash-maint-alerts" style="margin-bottom:14px"></div>
+    <div id="dash-goals-row" style="display:none;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px"></div>
+    <div id="dash-compare-wrap" style="display:none;margin-bottom:14px">
+      <div class="card" style="margin-bottom:0"><div class="card-hd"><span class="card-title">Esta semana vs semana anterior</span></div><div class="card-body" id="dash-compare"></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="two-col">
+      <div class="card"><div class="card-hd"><span class="card-title">Plataformas — semana</span></div><div class="card-body" id="dash-plat"></div></div>
+      <div class="card"><div class="card-hd"><span class="card-title">Gastos — semana</span></div><div class="card-body" id="dash-exp"></div></div>
+    </div>
+    <div class="card"><div class="card-hd"><span class="card-title">Últimas entradas</span></div><div id="dash-recent"></div></div>
+
+    <!-- YEAR SUMMARY -->
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Resumen 2026</span><span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)" id="year-days-left">—</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px" class="two-col">
+          <div><div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Bruto 2026</div><div style="font-size:20px;font-weight:700" id="year-gross">$0</div></div>
+          <div><div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Promedio mensual</div><div style="font-size:20px;font-weight:700" id="year-avg-month">$0</div></div>
+          <div><div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Proyección anual</div><div style="font-size:20px;font-weight:700;color:var(--green)" id="year-projection">$0</div></div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">Progreso del año</span>
+            <span style="font-size:11px;font-weight:600;font-family:var(--font-mono)" id="year-pct">0%</span>
+          </div>
+          <div style="height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+            <div id="year-bar" style="height:100%;background:var(--green);border-radius:3px;transition:width .4s ease;width:0%"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:6px" id="year-projection-note">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="page" id="page-history">
+    <div class="ph">
+      <div><div class="ph-title">Historial</div><div class="ph-sub" id="hist-count">0 registros</div></div>
+      <button class="btn btn-secondary" onclick="exportCSV()">Exportar CSV</button>
+    </div>
+    <div id="hist-wrap"></div>
+  </div>
+
+  <!-- GASTOS -->
+  <div class="page" id="page-expenses">
+    <div class="ph"><div><div class="ph-title">Gastos</div><div class="ph-sub">Todas las categorías</div></div></div>
+    <div class="mg">
+      <div class="mc featured"><div class="mc-label">Total este mes</div><div class="mc-value r" id="exp-month-total">$0</div><div class="mc-sub" id="exp-month-label">—</div></div>
+      <div class="mc"><div class="mc-label">Esta semana</div><div class="mc-value r" id="exp-week-total">$0</div><div class="mc-sub">semana actual</div></div>
+      <div class="mc"><div class="mc-label">Total acumulado</div><div class="mc-value r" id="exp-all-total">$0</div><div class="mc-sub">todos los registros</div></div>
+      <div class="mc"><div class="mc-label">Categoría top</div><div class="mc-value" id="exp-top-cat" style="font-size:15px">—</div><div class="mc-sub" id="exp-top-amt">—</div></div>
+    </div>
+    <div class="card"><div class="card-hd"><span class="card-title">Por categoría — acumulado</span></div><div class="card-body" id="exp-by-cat"></div></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Todos los gastos</span></div><div id="exp-list"></div></div>
+  </div>
+
+  <!-- SEMANAS -->
+  <div class="page" id="page-weekly">
+    <div class="ph"><div><div class="ph-title">Semanas</div><div class="ph-sub">De lunes a domingo</div></div></div>
+    <div id="weekly-list"></div>
+  </div>
+
+  <!-- ESTADÍSTICAS -->
+  <div class="page" id="page-stats">
+    <div class="ph">
+      <div><div class="ph-title">Estadísticas</div><div class="ph-sub">Análisis completo</div></div>
+      <button class="btn btn-secondary" onclick="exportPDF()">Exportar PDF</button>
+    </div>
+    <div class="mg">
+      <div class="mc featured"><div class="mc-label">Bruto total</div><div class="mc-value" id="st-gross">$0</div><div class="mc-sub" id="st-gross-sub">—</div></div>
+      <div class="mc"><div class="mc-label">Neto total</div><div class="mc-value g" id="st-net">$0</div><div class="mc-sub">bruto — gastos</div></div>
+      <div class="mc"><div class="mc-label">Gastos totales</div><div class="mc-value r" id="st-exp">$0</div><div class="mc-sub">todas las categorías</div></div>
+      <div class="mc"><div class="mc-label">Promedio diario</div><div class="mc-value" id="st-avg">—</div><div class="mc-sub">bruto por día</div></div>
+    </div>
+    <div class="mg" style="margin-top:-12px">
+      <div class="mc"><div class="mc-label">Millas totales</div><div class="mc-value" id="st-miles-total">0</div><div class="mc-sub">acumulado</div></div>
+      <div class="mc"><div class="mc-label">Promedio diario</div><div class="mc-value" id="st-miles-avg">—</div><div class="mc-sub">millas por día</div></div>
+      <div class="mc"><div class="mc-label">Mejor semana</div><div class="mc-value" id="st-miles-best">—</div><div class="mc-sub">millas en una semana</div></div>
+      <div class="mc"><div class="mc-label">$ por milla</div><div class="mc-value" id="st-ppm">—</div><div class="mc-sub">bruto promedio</div></div>
+    </div>
+    <div class="psg">
+      <div class="psc spark"><div class="psc-l">Spark Drive</div><div class="psc-v" id="st-spark">$0</div></div>
+      <div class="psc flex"><div class="psc-l">Amazon Flex</div><div class="psc-v" id="st-flex">$0</div></div>
+      <div class="psc door"><div class="psc-l">DoorDash</div><div class="psc-v" id="st-door">$0</div></div>
+      <div class="psc other"><div class="psc-l">Otras</div><div class="psc-v" id="st-other">$0</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" class="two-col">
+      <div class="card" style="margin-bottom:0"><div class="card-hd"><span class="card-title">Ingresos por plataforma</span></div><div class="card-body"><div class="chart-wrap" style="height:190px"><canvas id="chart-plat"></canvas></div></div></div>
+      <div class="card" style="margin-bottom:0"><div class="card-hd"><span class="card-title">Distribución de gastos</span></div><div class="card-body"><div class="chart-wrap" style="height:190px"><canvas id="chart-exp"></canvas></div></div></div>
+    </div>
+    <div class="card"><div class="card-hd"><span class="card-title">Bruto vs Neto mensual</span></div><div class="card-body"><div class="chart-wrap" style="height:210px"><canvas id="chart-monthly"></canvas></div></div></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Millas — promedio diario y comparativa semanal</span></div><div class="card-body"><div class="chart-wrap" style="height:200px"><canvas id="chart-miles"></canvas></div></div></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Tendencia semanal — comparativa mensual</span></div><div class="card-body"><div class="chart-wrap" style="height:220px"><canvas id="chart-trend"></canvas></div></div></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Mejor día de la semana</span></div><div class="card-body" id="st-best-days"></div></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Mejores días absolutos</span></div><div class="card-body" id="st-best-absolute"></div></div>
+  </div>
+
+  <!-- VEHÍCULO -->
+  <div class="page" id="page-vehicle">
+    <div class="ph">
+      <div><div class="ph-title">Vehículo</div><div class="ph-sub">Mantenimiento del auto</div></div>
+      <button class="btn btn-primary" onclick="openMaintModal()">+ Agregar</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" class="two-col">
+      <div class="card" style="margin-bottom:0"><div class="card-hd"><span class="card-title">Odómetro actual</span></div><div class="card-body"><div class="fgroup"><label class="flabel">Millas actuales del vehículo</label><input type="number" class="finput" id="v-odometer" placeholder="Ej: 85000" min="0" step="1" inputmode="decimal" oninput="saveVehicleSettings()"></div><div style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-top:6px" id="v-miles-added">—</div></div></div>
+      <div class="card" style="margin-bottom:0"><div class="card-hd"><span class="card-title">Precio de gasolina</span></div><div class="card-body"><div class="fgroup"><label class="flabel">Precio por galón ($)</label><div class="iprefix"><span class="pfx">$</span><input type="number" class="finput" id="v-gas-price" placeholder="3.50" min="0" step="0.01" inputmode="decimal" oninput="saveVehicleSettings()"></div></div></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px" class="two-col">
+      <div class="mc"><div class="mc-label">Total gastado</div><div class="mc-value r" id="v-total-spent">$0</div><div class="mc-sub">mantenimiento</div></div>
+      <div class="mc"><div class="mc-label">Último servicio</div><div class="mc-value" id="v-last-service" style="font-size:15px">—</div><div class="mc-sub" id="v-last-type">—</div></div>
+      <div class="mc"><div class="mc-label">Registros</div><div class="mc-value" id="v-count">0</div><div class="mc-sub">servicios</div></div>
+    </div>
+    <div id="v-alerts" style="margin-bottom:14px"></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Historial de mantenimiento</span></div><div id="v-maint-list"></div></div>
+  </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="page" id="page-settings">
+    <div class="ph"><div><div class="ph-title">Configuración</div><div class="ph-sub">Metas de ingreso</div></div></div>
+    <div class="card"><div class="card-hd"><span class="card-title">Metas de ingreso bruto</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="fgroup"><label class="flabel">Meta semanal ($)</label><div class="iprefix"><span class="pfx">$</span><input type="number" class="finput" id="cfg-weekly-goal" placeholder="0" min="0" step="10" inputmode="decimal"></div></div>
+          <div class="fgroup"><label class="flabel">Meta mensual ($)</label><div class="iprefix"><span class="pfx">$</span><input type="number" class="finput" id="cfg-monthly-goal" placeholder="0" min="0" step="10" inputmode="decimal"></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:40px">
+      <button class="btn btn-primary" onclick="saveSettingsForm()">Guardar configuración</button>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- MOBILE DRIVE BAR -->
+<div id="mobile-drive-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:var(--text);padding:8px 16px;flex-direction:row;align-items:center;justify-content:space-between">
+  <span id="drive-status-mobile" style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.5);flex:1">Sin conexion a Drive</span>
+  <button id="sync-btn-mobile" onclick="syncFromDrive()" style="display:none;background:none;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;color:#fff;font-size:12px;font-family:var(--font-mono);cursor:pointer;margin-right:6px;-webkit-tap-highlight-color:transparent">↻</button>
+  <button id="drive-signin-btn-mobile" onclick="signInDrive()" style="padding:5px 12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:11px;font-family:var(--font-mono);cursor:pointer;display:flex;align-items:center;gap:5px">
+    <svg width="11" height="11" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Conectar Drive
+  </button>
+  <button id="drive-signout-btn-mobile" onclick="signOutDrive()" style="padding:5px 12px;background:none;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.4);font-size:11px;font-family:var(--font-mono);cursor:pointer;display:none">Desconectar</button>
+</div>
+
+<!-- MORE MENU -->
+<div id="mobile-more-overlay" onclick="closeMoreMenu()" style="display:none;position:fixed;inset:0;z-index:140;background:rgba(0,0,0,0.3)"></div>
+<div id="mobile-more-menu" style="display:none;position:fixed;bottom:70px;left:0;right:0;z-index:150;padding:0 12px;flex-direction:column">
+  <div style="background:var(--text);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 -4px 20px rgba(0,0,0,0.3)">
+    <button onclick="moreNav('expenses')" style="display:flex;align-items:center;gap:14px;width:100%;padding:16px 20px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.8);font-size:14px;font-family:var(--font-ui);font-weight:500;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>Gastos</button>
+    <button onclick="moreNav('weekly')" style="display:flex;align-items:center;gap:14px;width:100%;padding:16px 20px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.8);font-size:14px;font-family:var(--font-ui);font-weight:500;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Por semana</button>
+    <button onclick="moreNav('stats')" style="display:flex;align-items:center;gap:14px;width:100%;padding:16px 20px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.8);font-size:14px;font-family:var(--font-ui);font-weight:500;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z"/></svg>Estadísticas</button>
+    <button onclick="moreNav('vehicle')" style="display:flex;align-items:center;gap:14px;width:100%;padding:16px 20px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.8);font-size:14px;font-family:var(--font-ui);font-weight:500;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3v-4l2-5h14l2 5v4h-2M5 17a2 2 0 104 0M15 17a2 2 0 104 0"/></svg>Vehículo</button>
+    <button onclick="moreNav('settings')" style="display:flex;align-items:center;gap:14px;width:100%;padding:16px 20px;background:none;border:none;color:rgba(255,255,255,.8);font-size:14px;font-family:var(--font-ui);font-weight:500;cursor:pointer;text-align:left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Configuración</button>
+  </div>
+  <button onclick="closeMoreMenu()" style="width:100%;margin-top:8px;padding:14px;background:var(--text);border:none;border-radius:var(--r-lg);color:rgba(255,255,255,.5);font-size:14px;font-family:var(--font-ui);cursor:pointer">Cerrar</button>
+</div>
+
+<nav class="mobile-nav">
+  <button onclick="showPage('dashboard')" id="mn-dashboard" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Inicio</button>
+  <button onclick="showPage('history')" id="mn-history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2v0a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Historial</button>
+  <button onclick="openQuickModal()" id="mn-quick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Rápido</button>
+  <button onclick="toggleMoreMenu()" id="mn-more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Más</button>
+</nav>
+
+<!-- QUICK MODAL -->
+<div class="modal-overlay" id="quick-modal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title">Registro rápido</span>
+      <button onclick="closeQuickModal()" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;cursor:pointer;font-size:13px;color:var(--text2);font-family:var(--font-ui)">Cerrar</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgroup" style="margin-bottom:14px">
+        <label class="flabel">Fecha</label>
+        <input type="date" class="finput" id="qf-date">
+      </div>
+      <div class="type-toggle">
+        <button class="type-btn income active" onclick="setQType('income',this)">+ Ingreso</button>
+        <button class="type-btn expense" onclick="setQType('expense',this)">− Gasto</button>
+      </div>
+      <!-- Income section -->
+      <div id="qf-income-section">
+        <label class="flabel" style="margin-bottom:8px;display:block">Plataforma</label>
+        <div class="plat-sel" style="margin-bottom:14px">
+          <button class="plat-btn active-spark" id="qplat-spark" onclick="selectQPlat('spark',this)">Spark Drive</button>
+          <button class="plat-btn" id="qplat-flex" onclick="selectQPlat('flex',this)">Amazon Flex</button>
+          <button class="plat-btn" id="qplat-door" onclick="selectQPlat('door',this)">DoorDash</button>
+          <button class="plat-btn" id="qplat-other" onclick="selectQPlat('other',this)">Otra</button>
+        </div>
+      </div>
+      <!-- Expense section -->
+      <div id="qf-expense-section" style="display:none">
+        <div class="fgroup" style="margin-bottom:14px">
+          <label class="flabel">Categoría</label>
+          <select class="finput fselect" id="qf-exp-cat">
+            <option value="fuel">⛽ Gasolina / Combustible</option>
+            <option value="food">🍔 Comida y bebidas</option>
+            <option value="maint">🔧 Mantenimiento del auto</option>
+            <option value="insurance">🛡 Seguro del auto</option>
+            <option value="phone">📱 Teléfono celular</option>
+            <option value="wash">🚿 Lavado del auto</option>
+            <option value="parking">🅿 Estacionamiento / Peajes</option>
+            <option value="supplies">🎒 Equipo y accesorios</option>
+            <option value="other">📦 Otros</option>
+          </select>
+        </div>
+      </div>
+      <div class="fgroup" style="margin-bottom:14px">
+        <label class="flabel">Monto ($)</label>
+        <div class="iprefix"><span class="pfx">$</span><input type="number" class="finput" id="qf-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" style="font-size:20px;padding:12px 12px 12px 24px"></div>
+      </div>
+      <div class="fgroup" id="qf-miles-wrap">
+        <label class="flabel">Millas totales del día (opcional)</label>
+        <input type="number" class="finput" id="qf-miles" placeholder="0" min="0" step="0.1" inputmode="decimal">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);margin-top:3px">Total de millas conducidas hoy</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeQuickModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveQuickEntry()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAINTENANCE MODAL -->
+<div class="modal-overlay" id="maint-modal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title" id="maint-modal-title">Nuevo registro</span>
+      <button onclick="closeMaintModal()" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;cursor:pointer;font-size:13px;color:var(--text2);font-family:var(--font-ui)">Cerrar</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="maint-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="fgroup"><label class="flabel">Fecha</label><input type="date" class="finput" id="maint-date"></div>
+        <div class="fgroup"><label class="flabel">Tipo de servicio</label>
+          <select class="finput fselect" id="maint-type">
+            <option value="oil">Cambio de aceite</option>
+            <option value="tires">Llantas</option>
+            <option value="brakes">Frenos</option>
+            <option value="battery">Batería</option>
+            <option value="ac">Aire acondicionado</option>
+            <option value="filter">Filtros</option>
+            <option value="transmission">Transmisión</option>
+            <option value="wash">Lavado / detalle</option>
+            <option value="inspection">Inspección</option>
+            <option value="other">Otro</option>
+          </select>
+        </div>
+        <div class="fgroup"><label class="flabel">Costo ($)</label><div class="iprefix"><span class="pfx">$</span><input type="number" class="finput" id="maint-cost" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div></div>
+        <div class="fgroup"><label class="flabel">Millas del odómetro</label><input type="number" class="finput" id="maint-miles" placeholder="Ej: 85000" min="0" step="1" inputmode="decimal"></div>
+        <div class="fgroup full">
+          <label class="flabel">Próximo servicio — intervalo</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fgroup"><label class="flabel" style="font-size:10px">Millas (ej: 5000)</label><input type="number" class="finput" id="maint-interval-miles" placeholder="Ej: 5000" min="0" step="100" inputmode="decimal"></div>
+            <div class="fgroup"><label class="flabel" style="font-size:10px">Semanas (ej: 12)</label><input type="number" class="finput" id="maint-interval-weeks" placeholder="Ej: 12" min="0" step="1" inputmode="decimal"></div>
+          </div>
+        </div>
+        <div class="fgroup full"><label class="flabel">Notas</label><textarea class="ftextarea" id="maint-notes" placeholder="Ej: usar aceite 5W-30 sintético..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeMaintModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMaintRecord()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT EVENT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-hd">
+      <span class="modal-title" id="edit-modal-title">Editar registro</span>
+      <button onclick="closeEditModal()" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;cursor:pointer;font-size:13px;color:var(--text2);font-family:var(--font-ui)">Cerrar</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-event-id">
+      <div class="fgroup" style="margin-bottom:14px">
+        <label class="flabel">Fecha</label>
+        <input type="date" class="finput" id="edit-date">
+      </div>
+      <!-- Income fields -->
+      <div id="edit-income-fields">
+        <div class="fgroup" style="margin-bottom:14px">
+          <label class="flabel">Plataforma</label>
+          <select class="finput fselect" id="edit-platform">
+            <option value="spark">Spark Drive</option>
+            <option value="flex">Amazon Flex</option>
+            <option value="door">DoorDash</option>
+            <option value="other">Otra</option>
+          </select>
+        </div>
+      </div>
+      <!-- Expense fields -->
+      <div id="edit-expense-fields" style="display:none">
+        <div class="fgroup" style="margin-bottom:14px">
+          <label class="flabel">Categoría</label>
+          <select class="finput fselect" id="edit-category">
+            <option value="fuel">⛽ Gasolina / Combustible</option>
+            <option value="food">🍔 Comida y bebidas</option>
+            <option value="maint">🔧 Mantenimiento del auto</option>
+            <option value="insurance">🛡 Seguro del auto</option>
+            <option value="phone">📱 Teléfono celular</option>
+            <option value="wash">🚿 Lavado del auto</option>
+            <option value="parking">🅿 Estacionamiento / Peajes</option>
+            <option value="supplies">🎒 Equipo y accesorios</option>
+            <option value="other">📦 Otros</option>
+          </select>
+        </div>
+      </div>
+      <div class="fgroup" style="margin-bottom:14px">
+        <label class="flabel">Millas totales del día (opcional)</label>
+        <input type="number" class="finput" id="edit-miles" placeholder="0" min="0" step="0.1" inputmode="decimal">
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Monto ($)</label>
+        <div class="iprefix"><span class="pfx">$</span><input type="number" class="finput" id="edit-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" style="font-size:18px;padding:11px 11px 11px 24px"></div>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between">
+      <button class="btn-del" onclick="deleteFromEditModal()" style="padding:9px 16px;font-size:13px">Borrar</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveEditedEvent()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP FAB -->
+<button onclick="openQuickModal()" id="desktop-fab" title="Registro rápido">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────
+const CLIENT_ID='675348667527-henth2tqrqtom52md2evg1e8ec3sfa8i.apps.googleusercontent.com';
+const SCOPES='https://www.googleapis.com/auth/drive.appdata';
+const FILE_NAME='gigtracker_data.json';
+const SK='gigtracker_v4';
+const SK_SETTINGS='gigtracker_settings_v1';
+const SK_MAINT='gigtracker_maint_v1';
+const SK_VEHICLE='gigtracker_vehicle_v1';
+
+// ── DATA ──────────────────────────────────────────────────────────────
+// New event model: each event is a single income or expense entry
+// events = [{id, date, type:'income'|'expense', platform:'spark'|'flex'|'door'|'other', category:'fuel'|'food'|..., amount, miles, notes}]
+let events=[], settings={weeklyGoal:0,monthlyGoal:0}, maintRecords=[], vehicleSettings={odometer:0,gasPrice:3.50};
+let cPlat=null,cExp=null,cMonthly=null,cMiles=null;
+let driveFileId=null,tokenClient=null,accessToken=null,driveReady=false;
+let tokenRenewTimer=null,isFirstConnect=true;
+
+// ── EXPENSE CATEGORIES ───────────────────────────────────────────────
+const EXP_CATS={
+  fuel:{label:'Gasolina / Combustible',icon:'⛽'},
+  food:{label:'Comida y bebidas',icon:'🍔'},
+  maint:{label:'Mantenimiento del auto',icon:'🔧'},
+  insurance:{label:'Seguro del auto',icon:'🛡'},
+  phone:{label:'Teléfono celular',icon:'📱'},
+  wash:{label:'Lavado del auto',icon:'🚿'},
+  parking:{label:'Estacionamiento / Peajes',icon:'🅿'},
+  supplies:{label:'Equipo y accesorios',icon:'🎒'},
+  other:{label:'Otros',icon:'📦'}
+};
+const PLAT_COLORS={spark:'var(--spark)',flex:'var(--flex)',door:'var(--door)',other:'var(--other)'};
+const PLAT_LABELS={spark:'Spark Drive',flex:'Amazon Flex',door:'DoorDash',other:'Otra'};
+
+// ── LOCAL STORAGE ─────────────────────────────────────────────────────
+const loadLocal=()=>{try{events=JSON.parse(localStorage.getItem(SK)||'[]');}catch(e){events=[];}};
+const saveLocal=()=>localStorage.setItem(SK,JSON.stringify(events));
+const loadSettings=()=>{try{const s=localStorage.getItem(SK_SETTINGS);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}};
+const saveSettings=()=>localStorage.setItem(SK_SETTINGS,JSON.stringify(settings));
+const loadMaint=()=>{try{maintRecords=JSON.parse(localStorage.getItem(SK_MAINT)||'[]');}catch(e){maintRecords=[];}};
+const saveMaint=()=>localStorage.setItem(SK_MAINT,JSON.stringify(maintRecords));
+const loadVehicle=()=>{try{const v=localStorage.getItem(SK_VEHICLE);if(v)vehicleSettings=Object.assign(vehicleSettings,JSON.parse(v));}catch(e){}};
+const saveVehicleSt=()=>localStorage.setItem(SK_VEHICLE,JSON.stringify(vehicleSettings));
+
+// ── DRIVE ─────────────────────────────────────────────────────────────
+function setDriveStatus(s){
+  const map={synced:['Guardado en Drive ✓','#2e7d32'],syncing:['Sincronizando...','#e07b00'],error:['Error al guardar','#c62828'],offline:['Sin conexion a Drive','#a09e97']};
+  const[txt,col]=map[s]||map.offline;
+  const el=document.getElementById('drive-status');if(el){el.textContent=txt;el.style.color=col;}
+  const em=document.getElementById('drive-status-mobile');if(em){em.textContent=txt;em.style.color=col;}
+}
+async function saveToDrive(){
+  if(!driveReady||!accessToken)return;
+  const body=JSON.stringify({events,settings,maintRecords,vehicleSettings,version:2});
+  try{
+    if(!driveFileId){
+      const q=encodeURIComponent('name="'+FILE_NAME+'"');
+      const list=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)&q='+q,{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json());
+      if(list.files&&list.files.length>0)driveFileId=list.files[0].id;
+    }
+    if(driveFileId){
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{method:'PATCH',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body});
+    } else {
+      const meta=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({name:FILE_NAME,parents:['appDataFolder']})}).then(r=>r.json());
+      driveFileId=meta.id;
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{method:'PATCH',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body});
+    }
+  }catch(e){driveFileId=null;throw e;}
+}
+async function loadFromDrive(){
+  if(!driveReady||!accessToken)return false;
+  try{
+    const q=encodeURIComponent('name="'+FILE_NAME+'"');
+    const list=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)&q='+q,{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json());
+    if(list.files&&list.files.length>0){
+      driveFileId=list.files[0].id;
+      const data=await fetch('https://www.googleapis.com/drive/v3/files/'+driveFileId+'?alt=media',{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json());
+      if(data&&data.version===2&&data.events){
+        events=data.events;saveLocal();
+        if(data.settings){settings=Object.assign({weeklyGoal:0,monthlyGoal:0},data.settings);saveSettings();}
+        if(data.maintRecords){maintRecords=data.maintRecords;saveMaint();}
+        if(data.vehicleSettings){vehicleSettings=Object.assign({odometer:0,gasPrice:3.50},data.vehicleSettings);saveVehicleSt();}
+        return true;
+      } else if(data&&data.entries){
+        events=migrateOldEntries(data.entries);saveLocal();
+        if(data.settings){settings=Object.assign({weeklyGoal:0,monthlyGoal:0},data.settings);saveSettings();}
+        if(data.maintRecords){maintRecords=data.maintRecords;saveMaint();}
+        if(data.vehicleSettings){vehicleSettings=Object.assign({odometer:0,gasPrice:3.50},data.vehicleSettings);saveVehicleSt();}
+        return true;
+      } else if(Array.isArray(data)){
+        events=migrateOldEntries(data);saveLocal();return true;
+      }
+    }
+    return false;
+  }catch(e){return false;}
+}
+const save=()=>{
+  saveLocal();
+  if(driveReady&&accessToken){
+    setDriveStatus('syncing');
+    saveToDrive()
+      .then(()=>setDriveStatus('synced'))
+      .catch(()=>setDriveStatus('error'));
+  }
+};
+function scheduleTokenRenewal(){
+  if(tokenRenewTimer)clearTimeout(tokenRenewTimer);
+  tokenRenewTimer=setTimeout(()=>{
+    if(tokenClient&&driveReady)tokenClient.requestAccessToken({prompt:''});
+  },50*60*1000);
+}
+function initGDrive(){
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID,scope:SCOPES,
+    callback:async(resp)=>{
+      if(resp.error){setDriveStatus('offline');return;}
+      accessToken=resp.access_token;
+      driveReady=true;
+      scheduleTokenRenewal();
+      if(isFirstConnect){
+        isFirstConnect=false;
+        setDriveStatus('syncing');
+        const loaded=await loadFromDrive();
+        if(loaded){localStorage.setItem('gigtracker_seeded_v1','1');renderDash();}
+        else{await saveToDrive();}
+        setDriveStatus('synced');
+        ['drive-signin-btn','drive-signin-btn-mobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+        ['drive-signout-btn','drive-signout-btn-mobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='flex';});
+        const sb=document.getElementById('sync-btn');if(sb)sb.style.display='block';
+        const sbm=document.getElementById('sync-btn-mobile');if(sbm)sbm.style.display='block';
+      } else {
+        setDriveStatus('synced');
+      }
+    }
+  });
+}
+function signInDrive(){
+  isFirstConnect=true;
+  tokenClient.requestAccessToken({prompt:'select_account'});
+}
+function signOutDrive(){
+  if(tokenRenewTimer){clearTimeout(tokenRenewTimer);tokenRenewTimer=null;}
+  google.accounts.oauth2.revoke(accessToken,()=>{
+    accessToken=null;driveReady=false;driveFileId=null;
+    setDriveStatus('offline');
+    ['drive-signin-btn','drive-signin-btn-mobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='flex';});
+    ['drive-signout-btn','drive-signout-btn-mobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+    const sb=document.getElementById('sync-btn');if(sb)sb.style.display='none';
+    const sbm=document.getElementById('sync-btn-mobile');if(sbm)sbm.style.display='none';
+  });
+}
+async function syncFromDrive(){
+  if(!driveReady||!accessToken){toast('Conecta Drive primero');return;}
+  setDriveStatus('syncing');
+  driveFileId=null;
+  try{
+    const loaded=await loadFromDrive();
+    if(loaded){
+      renderDash();
+      if(curPage==='history')renderHistory();
+      else if(curPage==='expenses')renderExpenses();
+      else if(curPage==='weekly')renderWeekly();
+      else if(curPage==='stats')renderStats();
+      toast('Sincronizado ✓');
+    }
+    setDriveStatus('synced');
+  }catch(e){toast('Error al sincronizar');setDriveStatus('error');}
+}
+function isMobile(){return window.innerWidth<=700;}
+function updateMobileDriveBar(){
+  const bar=document.getElementById('mobile-drive-bar');if(!bar)return;
+  const main=document.querySelector('.main');
+  if(isMobile()){bar.style.display='flex';if(main)main.style.paddingTop='46px';}
+  else{bar.style.display='none';if(main)main.style.paddingTop='';}
+}
+
+// ── MIGRATION ─────────────────────────────────────────────────────────
+function migrateOldEntries(oldEntries){
+  const newEvents=[];
+  oldEntries.forEach(e=>{
+    let id=e.id*10;
+    // Income events
+    if((e.spark||0)>0) newEvents.push({id:id++,date:e.date,type:'income',platform:'spark',amount:e.spark,miles:0,notes:e.notes||''});
+    if((e.flex||0)>0) newEvents.push({id:id++,date:e.date,type:'income',platform:'flex',amount:e.flex,miles:0,notes:''});
+    if((e.door||0)>0) newEvents.push({id:id++,date:e.date,type:'income',platform:'door',amount:e.door,miles:0,notes:''});
+    if((e.other||0)>0) newEvents.push({id:id++,date:e.date,type:'income',platform:'other',amount:e.other,miles:0,notes:''});
+    // Expense events
+    if((e.fuel||0)>0) newEvents.push({id:id++,date:e.date,type:'expense',category:'fuel',amount:e.fuel,notes:''});
+    if((e.maint||0)>0) newEvents.push({id:id++,date:e.date,type:'expense',category:'maint',amount:e.maint,notes:''});
+    if((e.food||0)>0) newEvents.push({id:id++,date:e.date,type:'expense',category:'food',amount:e.food,notes:''});
+    if((e.misc||0)>0) newEvents.push({id:id++,date:e.date,type:'expense',category:'other',amount:e.misc,notes:''});
+    // Miles on first income event of the day
+    if((e.miles||0)>0){
+      const inc=newEvents.find(ev=>ev.date===e.date&&ev.type==='income');
+      if(inc)inc.miles=e.miles;
+    }
+  });
+  return newEvents;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+const fm=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fm0=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtDate=d=>{const[y,m,day]=d.split('-').map(Number);return new Date(y,m-1,day).toLocaleDateString('es-US',{weekday:'short',month:'short',day:'numeric'});};
+const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+function getWeekKey(ds){const[y,m,d]=ds.split('-').map(Number),dt=new Date(y,m-1,d),dow=dt.getDay(),diff=dow===0?-6:1-dow,mon=new Date(dt);mon.setDate(dt.getDate()+diff);return mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0')+'-'+String(mon.getDate()).padStart(2,'0');}
+function getWeekLabel(wk){const[y,m,d]=wk.split('-').map(Number),mon=new Date(y,m-1,d),sun=new Date(mon);sun.setDate(mon.getDate()+6);return mon.toLocaleDateString('es-US',{month:'short',day:'numeric'})+' – '+sun.toLocaleDateString('es-US',{month:'short',day:'numeric',year:'numeric'});}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// Day aggregation helpers
+function getDayIncome(dayEvents){return dayEvents.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);}
+function getDayExpenses(dayEvents){return dayEvents.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);}
+function getDayMiles(dayEvents){return dayEvents.filter(e=>e.type==='income').reduce((s,e)=>s+(e.miles||0),0);}
+function groupByDate(){
+  const map={};
+  events.forEach(e=>{if(!map[e.date])map[e.date]=[];map[e.date].push(e);});
+  return map;
+}
+function getWeeks(){
+  const map={};
+  events.forEach(e=>{const wk=getWeekKey(e.date);if(!map[wk])map[wk]=[];if(!map[wk].find(x=>x===e))map[wk].push(e);});
+  return Object.entries(map).sort((a,b)=>b[0].localeCompare(a[0]));
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────
+let curPage='dashboard';
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.snav-btn,.mobile-nav button').forEach(b=>b.classList.remove('active'));
+  const sb=document.querySelector('.snav-btn[onclick="showPage(\''+p+'\')"]');if(sb)sb.classList.add('active');
+  const mb=document.getElementById('mn-'+p);if(mb)mb.classList.add('active');
+  curPage=p;
+  const morePages=['expenses','weekly','stats','vehicle','settings'];
+  const mnMore=document.getElementById('mn-more');
+  if(mnMore)mnMore.style.color=morePages.includes(p)?'#fff':'rgba(255,255,255,.4)';
+  if(p==='dashboard')renderDash();
+  if(p==='history')renderHistory();
+  if(p==='expenses')renderExpenses();
+  if(p==='weekly')renderWeekly();
+  if(p==='stats')renderStats();
+  if(p==='vehicle')renderVehicle();
+  if(p==='settings')renderSettings();
+}
+function toggleMoreMenu(){
+  const menu=document.getElementById('mobile-more-menu'),overlay=document.getElementById('mobile-more-overlay');
+  const isOpen=menu.style.display==='flex';
+  menu.style.display=isOpen?'none':'flex';menu.style.flexDirection='column';
+  overlay.style.display=isOpen?'none':'block';
+  document.getElementById('mn-more').style.color=isOpen?'rgba(255,255,255,.4)':'#fff';
+}
+function closeMoreMenu(){
+  document.getElementById('mobile-more-menu').style.display='none';
+  document.getElementById('mobile-more-overlay').style.display='none';
+  document.getElementById('mn-more').style.color='rgba(255,255,255,.4)';
+}
+function moreNav(page){closeMoreMenu();showPage(page);}
+
+// ── MOBILE DRIVE BAR ──────────────────────────────────────────────────
+function isMobile(){return window.innerWidth<=700;}
+function updateMobileDriveBar(){
+  const bar=document.getElementById('mobile-drive-bar');if(!bar)return;
+  const main=document.querySelector('.main');
+  if(isMobile()){
+    bar.style.display='flex';
+    if(main)main.style.paddingTop='46px';
+  } else {
+    bar.style.display='none';
+    if(main)main.style.paddingTop='';
+  }
+}
+
+// ── INDEX ─────────────────────────────────────────────────────────────
+function renderIndex(){
+  const today=new Date(),jan1=new Date(today.getFullYear(),0,1);
+  const dayOfYear=Math.floor((today-jan1)/86400000)+1;
+  const workedDays=new Set(events.filter(e=>e.type==='income').map(e=>e.date)).size;
+  const offDays=dayOfYear-workedDays;
+  const wp=((workedDays/dayOfYear)*100).toFixed(0);
+  const op=((offDays/dayOfYear)*100).toFixed(0);
+  document.getElementById('idx-year').textContent=dayOfYear;
+  document.getElementById('idx-year-bar').style.width='100%';
+  document.getElementById('idx-worked').textContent=workedDays;
+  document.getElementById('idx-worked-sub').textContent=wp+'% de los días del año';
+  document.getElementById('idx-worked-bar').style.width=wp+'%';
+  document.getElementById('idx-off').textContent=offDays;
+  document.getElementById('idx-off-sub').textContent=op+'% de los días del año';
+  document.getElementById('idx-off-bar').style.width=op+'%';
+}
+
+// ── QUICK MODAL ───────────────────────────────────────────────────────
+let qType='income';
+let qPlat='spark';
+
+function openQuickModal(){
+  document.getElementById('qf-date').value=todayStr();
+  document.getElementById('qf-amount').value='';
+  document.getElementById('qf-miles').value='';
+  document.getElementById('qf-exp-cat').value='fuel';
+  setQType('income',document.querySelector('.type-btn.income'));
+  selectQPlat('spark',document.getElementById('qplat-spark'));
+  document.getElementById('quick-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('qf-amount').focus(),150);
+}
+function closeQuickModal(){document.getElementById('quick-modal').classList.remove('open');}
+
+function setQType(type,btn){
+  qType=type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('qf-income-section').style.display=type==='income'?'block':'none';
+  document.getElementById('qf-expense-section').style.display=type==='expense'?'block':'none';
+  document.getElementById('qf-miles-wrap').style.display='block';
+}
+
+function selectQPlat(plat,btn){
+  qPlat=plat;
+  document.querySelectorAll('.plat-btn').forEach(b=>{b.className='plat-btn';});
+  btn.classList.add('active-'+plat);
+}
+
+function saveQuickEntry(){
+  const date=document.getElementById('qf-date').value;
+  const amount=parseFloat(document.getElementById('qf-amount').value)||0;
+  if(!date){toast('Selecciona una fecha');return;}
+  if(amount===0){toast('Ingresa un monto');return;}
+  const ev={id:Date.now(),date,type:qType,amount};
+  if(qType==='income'){
+    ev.platform=qPlat;
+    ev.notes='';
+  } else {
+    ev.category=document.getElementById('qf-exp-cat').value;
+    ev.notes='';
+  }
+  // Miles always saved (total day miles, not per platform)
+  ev.miles=parseFloat(document.getElementById('qf-miles').value)||0;
+  events.unshift(ev);
+  save();
+  closeQuickModal();
+  toast('Guardado ✓');
+  if(curPage==='dashboard')renderDash();
+  if(curPage==='history')renderHistory();
+  if(curPage==='expenses')renderExpenses();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────
+function renderDash(){
+  renderIndex();
+  const today=todayStr(),wk=getWeekKey(today);
+  const todayEvs=events.filter(e=>e.date===today);
+  const weekEvs=events.filter(e=>getWeekKey(e.date)===wk);
+  const grossToday=getDayIncome(todayEvs);
+  const grossWeek=weekEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const expWeek=weekEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const workedDaysWk=new Set(weekEvs.filter(e=>e.type==='income').map(e=>e.date)).size;
+
+  document.getElementById('d-gross-today').textContent=fm(grossToday);
+  document.getElementById('d-sub-today').textContent=todayEvs.filter(e=>e.type==='income').length?todayEvs.filter(e=>e.type==='income').length+' ingreso(s) hoy':'sin registros hoy';
+  document.getElementById('d-gross-week').textContent=fm(grossWeek);
+  document.getElementById('d-days-week').textContent=workedDaysWk+' día(s) trabajado(s)';
+  const milesWeek=weekEvs.reduce((s,e)=>s+(e.miles||0),0);
+  document.getElementById('d-exp-week').textContent=fm(expWeek);
+  document.getElementById('d-miles-week').textContent=milesWeek.toFixed(0);
+  document.getElementById('d-miles-sub').textContent=workedDaysWk>0?'prom. '+(milesWeek/workedDaysWk).toFixed(0)+' mi/día':'acumulado semanal';
+  document.getElementById('d-days-week').textContent=workedDaysWk+' día(s) trabajado(s)';
+  document.getElementById('dash-wk-label').textContent=getWeekLabel(wk);
+
+  // Goals
+  const gr=document.getElementById('dash-goals-row');
+  if(settings.weeklyGoal>0||settings.monthlyGoal>0){
+    gr.style.display='grid';
+    let html='';
+    if(settings.weeklyGoal>0)html+=goalBarHTML(grossWeek,settings.weeklyGoal,'Meta semanal bruto','#1565c0');
+    if(settings.monthlyGoal>0){
+      const cm=today.slice(0,7);
+      const nm=events.filter(e=>e.type==='income'&&e.date.startsWith(cm)).reduce((s,e)=>s+e.amount,0);
+      html+=goalBarHTML(nm,settings.monthlyGoal,'Meta mensual bruto','#5e35b1');
+    }
+    gr.innerHTML=html;
+  } else {gr.style.display='none';}
+
+  // Week comparison
+  const weeks=getWeeks();
+  const cw=document.getElementById('dash-compare-wrap');
+  if(weeks.length>=2){
+    cw.style.display='block';
+    const prevWk=weeks[1][0];
+    const pEvs=events.filter(e=>getWeekKey(e.date)===prevWk);
+    const grossP=pEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+    const expP=pEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+    const diff=grossWeek-grossP,diffE=expWeek-expP;
+    const arrow=v=>v>=0?'▲':'▼',col=v=>v>=0?'var(--green)':'var(--red)';
+    document.getElementById('dash-compare').innerHTML=
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0">'+
+      '<div style="padding:10px 0;border-right:1px solid var(--border)"><div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Bruto</div><div style="font-size:15px;font-weight:600">'+fm(grossWeek)+'</div><div style="font-size:11px;color:'+col(diff)+';font-family:var(--font-mono);margin-top:2px">'+arrow(diff)+' '+fm(Math.abs(diff))+'</div></div>'+
+      '<div style="padding:10px 14px"><div style="font-size:10px;color:var(--text3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Gastos</div><div style="font-size:15px;font-weight:600">'+fm(expWeek)+'</div><div style="font-size:11px;color:'+col(-diffE)+';font-family:var(--font-mono);margin-top:2px">'+arrow(-diffE)+' '+fm(Math.abs(diffE))+'</div></div>'+
+      '</div>';
+  } else {cw.style.display='none';}
+
+  // Platform bars
+  const plats=['spark','flex','door','other'];
+  const platTotals={};
+  plats.forEach(p=>{platTotals[p]=weekEvs.filter(e=>e.type==='income'&&e.platform===p).reduce((s,e)=>s+e.amount,0);});
+  const pd=document.getElementById('dash-plat');
+  if(!grossWeek){pd.innerHTML='<div class="empty"><p>Sin datos esta semana</p></div>';}
+  else pd.innerHTML=plats.filter(p=>platTotals[p]>0).map(p=>'<div class="plat-row"><span class="plat-dot" style="background:'+PLAT_COLORS[p]+'"></span><span class="plat-name">'+PLAT_LABELS[p]+'</span><div class="plat-bar-wrap"><div class="plat-bar" style="width:'+((platTotals[p]/grossWeek)*100).toFixed(0)+'%;background:'+PLAT_COLORS[p]+'"></div></div><span class="plat-amount">'+fm(platTotals[p])+'</span><span class="plat-pct">'+((platTotals[p]/grossWeek)*100).toFixed(0)+'%</span></div>').join('');
+
+  // Expense breakdown
+  const expTotals={};
+  weekEvs.filter(e=>e.type==='expense').forEach(e=>{expTotals[e.category]=(expTotals[e.category]||0)+e.amount;});
+  const ed=document.getElementById('dash-exp');
+  const expEntries=Object.entries(expTotals).sort((a,b)=>b[1]-a[1]);
+  if(!expEntries.length){ed.innerHTML='<div class="empty"><p>Sin gastos esta semana</p></div>';}
+  else ed.innerHTML=expEntries.map(([cat,amt])=>'<div class="exp-row"><span class="exp-name">'+(EXP_CATS[cat]?.icon||'')+'  '+(EXP_CATS[cat]?.label||cat)+'</span><span class="exp-amt">-'+fm(amt)+'</span></div>').join('');
+
+  // Recent
+  const byDate=groupByDate();
+  const recentDates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a)).slice(0,5);
+  const rd=document.getElementById('dash-recent');
+  if(!recentDates.length){rd.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg><p>Registra tu primer evento</p></div>';
+  } else {
+    rd.innerHTML='<table class="etable"><thead><tr><th>Fecha</th><th>Plataformas</th><th>Bruto</th><th>Gastos</th></tr></thead><tbody>'+
+    recentDates.map(date=>{
+      const dayEvs=byDate[date];
+      const gross=getDayIncome(dayEvs),exp=getDayExpenses(dayEvs);
+      const platTags=[...new Set(dayEvs.filter(e=>e.type==='income').map(e=>e.platform))].map(p=>'<span class="tag t'+p.charAt(0)+'">'+PLAT_LABELS[p]+'</span>').join('');
+      return '<tr><td>'+fmtDate(date)+'</td><td>'+platTags+'</td><td style="font-weight:600">'+fm(gross)+'</td><td style="color:var(--red)">'+(exp>0?'-'+fm(exp):'—')+'</td></tr>';
+    }).join('')+'</tbody></table>';
+  }
+  document.getElementById('foot-gross').textContent=fm(grossWeek)+' bruto';
+  document.getElementById('foot-sub').textContent=events.length+' registros';
+
+  // Maintenance alerts
+  renderServiceAlerts('dash-maint-alerts');
+  // Reminder & year
+  checkReminder();
+  renderYearSummary();
+}
+
+function goalBarHTML(current,goal,label,color){
+  const pct=goal>0?Math.min((current/goal)*100,100):0;
+  const over=current>goal&&goal>0;
+  return '<div class="goal-card"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-mono);margin-bottom:6px">'+label+'</div>'+
+    '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px"><span style="font-size:20px;font-weight:700;color:'+(over?'var(--green)':'var(--text)')+'">'+fm(current)+'</span><span style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">meta '+fm(goal)+'</span></div>'+
+    '<div class="goal-bar-track"><div class="goal-bar-fill" style="width:'+pct.toFixed(0)+'%;background:'+(over?'var(--green)':color)+'"></div></div>'+
+    '<div style="font-size:11px;color:'+(over?'var(--green)':'var(--text3)')+';font-family:var(--font-mono)">'+(over?'Meta superada +'+fm(current-goal):pct.toFixed(0)+'% — faltan '+fm(goal-current))+'</div></div>';
+}
+
+// ── HISTORY ───────────────────────────────────────────────────────────
+function renderHistory(){
+  const byDate=groupByDate();
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  document.getElementById('hist-count').textContent=dates.length+' días registrados';
+  const wrap=document.getElementById('hist-wrap');
+  if(!dates.length){wrap.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg><p>No hay registros aún</p></div>';return;}
+  wrap.innerHTML=dates.map(date=>{
+    const dayEvs=byDate[date];
+    const gross=getDayIncome(dayEvs),exp=getDayExpenses(dayEvs),net=gross-exp;
+    const miles=getDayMiles(dayEvs);
+    const incEvs=dayEvs.filter(e=>e.type==='income');
+    const expEvs=dayEvs.filter(e=>e.type==='expense');
+    return '<div class="wacc"><div class="wacc-hd" onclick="toggleDay(\'day'+date.replace(/-/g,'')+'\')" style="cursor:pointer">'+
+      '<div><div style="font-size:13px;font-weight:600">'+fmtDate(date)+'</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--font-mono)">'+
+      incEvs.length+' ingreso(s)'+(expEvs.length?' · '+expEvs.length+' gasto(s)':'')+(miles>0?' · '+miles.toFixed(0)+' mi':'')+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+      '<div style="text-align:right"><div style="font-size:16px;font-weight:700">'+fm(gross)+'</div>'+(exp>0?'<div style="font-size:11px;color:var(--red);font-family:var(--font-mono)">-'+fm(exp)+'</div>':'')+'</div>'+
+      '<span class="wacc-chev" id="chvday'+date.replace(/-/g,'')+'">▼</span></div></div>'+
+      '<div class="wacc-body" id="day'+date.replace(/-/g,'')+'">'+
+      (incEvs.length?'<div style="padding:8px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);font-family:var(--font-mono)">Ingresos</div>'+
+      incEvs.map(e=>'<div class="day-event-row" onclick="openEditModal('+e.id+')" style="cursor:pointer" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'"><span class="tag t'+e.platform.charAt(0)+'" style="flex-shrink:0">'+PLAT_LABELS[e.platform]+'</span><span class="day-event-amt" style="color:var(--green);margin-left:auto">'+fm(e.amount)+'</span>'+(e.miles>0?'<span style="font-size:11px;color:var(--text3);font-family:var(--font-mono);margin-left:8px">'+e.miles.toFixed(0)+' mi</span>':'')+'<span style="font-size:11px;color:var(--text3);margin-left:8px;font-family:var(--font-mono)">✎</span></div>').join(''):'')  +
+      (expEvs.length?'<div style="padding:8px 18px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);font-family:var(--font-mono);border-top:'+(incEvs.length?'1px solid var(--border)':'none')+'">Gastos</div>'+
+      expEvs.map(e=>'<div class="day-event-row" onclick="openEditModal('+e.id+')" style="cursor:pointer" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'"><span style="font-size:12px;font-family:var(--font-mono);flex:1">'+(EXP_CATS[e.category]?.icon||'')+'  '+(EXP_CATS[e.category]?.label||e.category)+'</span><span class="day-event-amt" style="color:var(--red)">-'+fm(e.amount)+'</span><span style="font-size:11px;color:var(--text3);margin-left:8px;font-family:var(--font-mono)">✎</span></div>').join(''):'')  +
+      '</div></div>';
+  }).join('');
+}
+function toggleDay(id){
+  const b=document.getElementById(id),h=document.getElementById('chv'+id);
+  if(b)b.classList.toggle('open');
+  if(h)h.parentElement.classList.toggle('open');
+}
+function openEditModal(id){
+  const ev=events.find(e=>e.id===id);
+  if(!ev)return;
+  document.getElementById('edit-event-id').value=id;
+  document.getElementById('edit-date').value=ev.date;
+  document.getElementById('edit-amount').value=ev.amount;
+  document.getElementById('edit-modal-title').textContent=ev.type==='income'?'Editar ingreso':'Editar gasto';
+  if(ev.type==='income'){
+    document.getElementById('edit-income-fields').style.display='block';
+    document.getElementById('edit-expense-fields').style.display='none';
+    document.getElementById('edit-platform').value=ev.platform||'spark';
+  } else {
+    document.getElementById('edit-income-fields').style.display='none';
+    document.getElementById('edit-expense-fields').style.display='block';
+    document.getElementById('edit-category').value=ev.category||'other';
+  }
+  document.getElementById('edit-miles').value=ev.miles||'';
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeEditModal(){document.getElementById('edit-modal').classList.remove('open');}
+function saveEditedEvent(){
+  const id=parseInt(document.getElementById('edit-event-id').value);
+  const amount=parseFloat(document.getElementById('edit-amount').value)||0;
+  if(amount===0){toast('Ingresa un monto');return;}
+  const idx=events.findIndex(e=>e.id===id);
+  if(idx===-1)return;
+  events[idx].date=document.getElementById('edit-date').value;
+  events[idx].amount=amount;
+  if(events[idx].type==='income'){
+    events[idx].platform=document.getElementById('edit-platform').value;
+    events[idx].miles=parseFloat(document.getElementById('edit-miles').value)||0;
+  } else {
+    events[idx].category=document.getElementById('edit-category').value;
+  }
+  save();closeEditModal();toast('Actualizado ✓');
+  if(curPage==='history')renderHistory();
+  else if(curPage==='dashboard')renderDash();
+  else if(curPage==='expenses')renderExpenses();
+}
+function deleteFromEditModal(){
+  const id=parseInt(document.getElementById('edit-event-id').value);
+  if(!confirm('¿Eliminar este registro?'))return;
+  events=events.filter(e=>e.id!==id);save();closeEditModal();toast('Eliminado');
+  if(curPage==='history')renderHistory();
+  else if(curPage==='dashboard')renderDash();
+  else if(curPage==='expenses')renderExpenses();
+}
+
+function deleteEvent(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  events=events.filter(e=>e.id!==id);save();toast('Eliminado');
+  if(curPage==='history')renderHistory();
+  else if(curPage==='dashboard')renderDash();
+  else if(curPage==='expenses')renderExpenses();
+}
+
+// ── EXPENSES PAGE ─────────────────────────────────────────────────────
+function renderExpenses(){
+  const today=todayStr(),wk=getWeekKey(today),cm=today.slice(0,7);
+  const expAll=events.filter(e=>e.type==='expense');
+  const expMonth=expAll.filter(e=>e.date.startsWith(cm));
+  const expWeek=expAll.filter(e=>getWeekKey(e.date)===wk);
+  const totalAll=expAll.reduce((s,e)=>s+e.amount,0);
+  const totalMonth=expMonth.reduce((s,e)=>s+e.amount,0);
+  const totalWeek=expWeek.reduce((s,e)=>s+e.amount,0);
+  const[y,m]=cm.split('-').map(Number);
+  document.getElementById('exp-month-total').textContent=fm(totalMonth);
+  document.getElementById('exp-month-label').textContent=new Date(y,m-1,1).toLocaleDateString('es-US',{month:'long',year:'numeric'});
+  document.getElementById('exp-week-total').textContent=fm(totalWeek);
+  document.getElementById('exp-all-total').textContent=fm(totalAll);
+
+  // By category
+  const byCat={};
+  expAll.forEach(e=>{byCat[e.category]=(byCat[e.category]||0)+e.amount;});
+  const catEntries=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  if(catEntries.length){
+    document.getElementById('exp-top-cat').textContent=(EXP_CATS[catEntries[0][0]]?.icon||'')+' '+(EXP_CATS[catEntries[0][0]]?.label||catEntries[0][0]);
+    document.getElementById('exp-top-amt').textContent=fm(catEntries[0][1])+' total';
+  }
+  const bcDiv=document.getElementById('exp-by-cat');
+  if(!catEntries.length){bcDiv.innerHTML='<div class="empty"><p>Sin gastos registrados</p></div>';}
+  else bcDiv.innerHTML=catEntries.map(([cat,amt])=>{
+    const pct=totalAll>0?((amt/totalAll)*100).toFixed(0):0;
+    return '<div class="exp-row"><span class="exp-name">'+(EXP_CATS[cat]?.icon||'')+'  '+(EXP_CATS[cat]?.label||cat)+'</span><span><span class="exp-amt">-'+fm(amt)+'</span><span class="exp-pct">'+pct+'%</span></span></div>';
+  }).join('');
+
+  // All expenses list grouped by date
+  const byDate={};
+  expAll.forEach(e=>{if(!byDate[e.date])byDate[e.date]=[];byDate[e.date].push(e);});
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  const elDiv=document.getElementById('exp-list');
+  if(!dates.length){elDiv.innerHTML='<div class="empty"><p>Sin gastos registrados</p></div>';return;}
+  elDiv.innerHTML='<table class="etable"><thead><tr><th>Fecha</th><th>Categoría</th><th>Monto</th><th></th></tr></thead><tbody>'+
+    dates.flatMap(date=>byDate[date].map(e=>
+      '<tr onclick="openEditModal('+e.id+')" style="cursor:pointer"><td style="white-space:nowrap">'+fmtDate(e.date)+'</td><td>'+(EXP_CATS[e.category]?.icon||'')+' '+(EXP_CATS[e.category]?.label||e.category)+'</td><td style="color:var(--red);font-weight:600">-'+fm(e.amount)+'</td><td style="color:var(--text3);font-size:12px">✎ editar</td></tr>'
+    )).join('')+'</tbody></table>';
+}
+
+// ── WEEKLY ────────────────────────────────────────────────────────────
+function renderWeekly(){
+  const weeks=getWeeks();
+  const container=document.getElementById('weekly-list');
+  if(!weeks.length){container.innerHTML='<div class="empty" style="padding:60px"><p>Sin datos aún</p></div>';return;}
+  container.innerHTML=weeks.map(([wk,wEvs])=>{
+    const gross=wEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+    const exp=wEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+    const net=gross-exp;
+    const miles=wEvs.filter(e=>e.type==='income').reduce((s,e)=>s+(e.miles||0),0);
+    const days=new Set(wEvs.filter(e=>e.type==='income').map(e=>e.date)).size;
+    const id='wk'+wk.replace(/-/g,'');
+    const platTotals={};
+    wEvs.filter(e=>e.type==='income').forEach(e=>{platTotals[e.platform]=(platTotals[e.platform]||0)+e.amount;});
+    const expTotals={};
+    wEvs.filter(e=>e.type==='expense').forEach(e=>{expTotals[e.category]=(expTotals[e.category]||0)+e.amount;});
+    return '<div class="wacc"><div class="wacc-hd" onclick="toggleW(\''+id+'\')" >'+
+      '<div><div style="font-size:13px;font-weight:600">'+getWeekLabel(wk)+'</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--font-mono)">'+days+' día(s) · '+miles.toFixed(0)+' millas</div></div>'+
+      '<div style="display:flex;align-items:center"><div style="text-align:right"><div style="font-size:17px;font-weight:700">'+fm(gross)+'</div>'+(exp>0?'<div style="font-size:11px;color:var(--red);font-family:var(--font-mono)">-'+fm(exp)+'</div>':'')+'</div><span class="wacc-chev" id="chv-'+id+'">▼</span></div></div>'+
+      '<div class="wacc-body" id="'+id+'">'+
+      '<div class="wsg">'+
+      '<div class="ws"><div class="wsl">Bruto</div><div class="wsv">'+fm(gross)+'</div></div>'+
+      '<div class="ws"><div class="wsl">Gastos</div><div class="wsv" style="color:var(--red)">'+( exp>0?'-'+fm(exp):'$0')+'</div></div>'+
+      '<div class="ws"><div class="wsl">Neto</div><div class="wsv" style="color:'+(net>=0?'var(--green)':'var(--red)')+'">'+fm(net)+'</div></div>'+
+      '</div>'+
+      '<div class="wsg" style="border-top:1px solid var(--border)">'+
+      '<div class="ws"><div class="wsl">Millas</div><div class="wsv">'+miles.toFixed(0)+'</div></div>'+
+      '<div class="ws"><div class="wsl">Días trabajados</div><div class="wsv">'+days+'</div></div>'+
+      '<div class="ws"><div class="wsl">Prom. diario bruto</div><div class="wsv">'+(days>0?fm(gross/days):'—')+'</div></div>'+
+      '</div>'+
+      '<div style="padding:12px 18px;border-top:1px solid var(--border)">'+
+      '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;font-family:var(--font-mono)">Plataformas</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+      Object.entries(platTotals).map(([p,a])=>'<span class="tag t'+p.charAt(0)+'">'+PLAT_LABELS[p]+' '+fm(a)+'</span>').join('')+'</div>'+
+      (Object.keys(expTotals).length?
+      '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:10px 0 6px;font-family:var(--font-mono)">Gastos</div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text2);font-family:var(--font-mono)">'+
+      Object.entries(expTotals).map(([cat,amt])=>'<span>'+(EXP_CATS[cat]?.label||cat)+' '+fm(amt)+'</span>').join('')+'</div>':'')+'</div></div></div>';
+  }).join('');
+}
+function toggleW(id){const b=document.getElementById(id),h=document.getElementById('chv-'+id);if(b)b.classList.toggle('open');if(h)h.parentElement.classList.toggle('open');}
+
+// ── STATS ─────────────────────────────────────────────────────────────
+function renderStats(){
+  const incomeEvs=events.filter(e=>e.type==='income');
+  const expenseEvs=events.filter(e=>e.type==='expense');
+  const gross=incomeEvs.reduce((s,e)=>s+e.amount,0);
+  const exp=expenseEvs.reduce((s,e)=>s+e.amount,0);
+  const net=gross-exp;
+  const miles=incomeEvs.reduce((s,e)=>s+(e.miles||0),0);
+  const days=new Set(incomeEvs.map(e=>e.date)).size;
+  const spark=incomeEvs.filter(e=>e.platform==='spark').reduce((s,e)=>s+e.amount,0);
+  const flex=incomeEvs.filter(e=>e.platform==='flex').reduce((s,e)=>s+e.amount,0);
+  const door=incomeEvs.filter(e=>e.platform==='door').reduce((s,e)=>s+e.amount,0);
+  const other=incomeEvs.filter(e=>e.platform==='other').reduce((s,e)=>s+e.amount,0);
+
+  document.getElementById('st-gross').textContent=fm(gross);
+  document.getElementById('st-gross-sub').textContent=days+' días trabajados';
+  document.getElementById('st-net').textContent=fm(net);
+  document.getElementById('st-net').className='mc-value '+(net>=0?'g':'r');
+  document.getElementById('st-exp').textContent=fm(exp);
+  document.getElementById('st-avg').textContent=days>0?fm(gross/days):'—';
+  const totalMiles=events.reduce((s,e)=>s+(e.miles||0),0);
+  const miDays=new Set(events.filter(e=>e.miles>0).map(e=>e.date)).size;
+  const weekMilesList=getWeeks().map(([,we])=>we.reduce((s,e)=>s+(e.miles||0),0));
+  const bestWeekMiles=weekMilesList.length?Math.max(...weekMilesList):0;
+  document.getElementById('st-miles-total').textContent=totalMiles.toFixed(0);
+  document.getElementById('st-miles-avg').textContent=miDays>0?(totalMiles/miDays).toFixed(0)+' mi':'—';
+  document.getElementById('st-miles-best').textContent=bestWeekMiles>0?bestWeekMiles.toFixed(0)+' mi':'—';
+  document.getElementById('st-ppm').textContent=totalMiles>0?'$'+(gross/totalMiles).toFixed(2):'—';
+  document.getElementById('st-spark').textContent=fm0(spark);
+  document.getElementById('st-flex').textContent=fm0(flex);
+  document.getElementById('st-door').textContent=fm0(door);
+  document.getElementById('st-other').textContent=fm0(other);
+
+  const tc='#a09e97',gc='rgba(0,0,0,0.05)';
+
+  // Platform donut
+  const pd=[spark,flex,door,other],pl=['Spark Drive','Amazon Flex','DoorDash','Otra'],pc=['#e07b00','#1565c0','#c62828','#5e35b1'];
+  const pf=pd.map((v,i)=>v>0?i:-1).filter(i=>i>=0);
+  if(cPlat)cPlat.destroy();
+  if(pf.length)cPlat=new Chart(document.getElementById('chart-plat').getContext('2d'),{type:'doughnut',data:{labels:pf.map(i=>pl[i]),datasets:[{data:pf.map(i=>pd[i]),backgroundColor:pf.map(i=>pc[i]),borderColor:'#fff',borderWidth:3,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,padding:10,font:{size:11,family:'IBM Plex Mono'},boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fm(ctx.raw)}}}}});
+
+  // Expense donut
+  const expByCat={};
+  expenseEvs.forEach(e=>{expByCat[e.category]=(expByCat[e.category]||0)+e.amount;});
+  const expCatEntries=Object.entries(expByCat).sort((a,b)=>b[1]-a[1]);
+  if(cExp)cExp.destroy();
+  if(expCatEntries.length)cExp=new Chart(document.getElementById('chart-exp').getContext('2d'),{type:'doughnut',data:{labels:expCatEntries.map(([c])=>EXP_CATS[c]?.label||c),datasets:[{data:expCatEntries.map(([,v])=>v),backgroundColor:['#e07b00','#c62828','#2e7d32','#5e35b1','#00838f','#0288d1','#546e7a','#78909c','#4e342e'],borderColor:'#fff',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,padding:8,font:{size:10,family:'IBM Plex Mono'},boxWidth:10,boxHeight:10}},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fm(ctx.raw)}}}}});
+
+  // Monthly chart
+  const months={};
+  incomeEvs.forEach(e=>{const[y,m]=e.date.split('-');const key=y+'-'+m;if(!months[key])months[key]={gross:0,net:0,label:new Date(parseInt(y),parseInt(m)-1,1).toLocaleDateString('es-US',{month:'short',year:'2-digit'})};months[key].gross+=e.amount;});
+  expenseEvs.forEach(e=>{const[y,m]=e.date.split('-');const key=y+'-'+m;if(months[key])months[key].net=months[key].gross-(months[key].exp=(months[key].exp||0)+e.amount);});
+  Object.values(months).forEach(m=>{if(m.net===undefined)m.net=m.gross-(m.exp||0);});
+  const mSorted=Object.entries(months).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(cMonthly)cMonthly.destroy();
+  if(mSorted.length)cMonthly=new Chart(document.getElementById('chart-monthly').getContext('2d'),{type:'bar',data:{labels:mSorted.map(([,v])=>v.label),datasets:[{label:'Bruto',data:mSorted.map(([,v])=>parseFloat(v.gross.toFixed(2))),backgroundColor:'rgba(21,101,192,0.3)',borderRadius:4,borderSkipped:false},{label:'Neto',data:mSorted.map(([,v])=>parseFloat(v.net.toFixed(2))),backgroundColor:mSorted.map(([,v])=>v.net>=0?'rgba(46,125,50,0.8)':'rgba(198,40,40,0.8)'),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,font:{size:11,family:'IBM Plex Mono'},boxWidth:10,boxHeight:10,padding:10}},tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': $'+ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2})}}},scales:{x:{ticks:{color:tc,font:{size:11,family:'IBM Plex Mono'}},grid:{color:gc},border:{color:gc}},y:{ticks:{color:tc,font:{size:11,family:'IBM Plex Mono'},callback:v=>'$'+v.toLocaleString('en-US')},grid:{color:gc},border:{color:gc}}}}});
+
+  // Miles chart - weekly comparison
+  const weeksList=getWeeks().slice(0,8).reverse();
+  if(cMiles)cMiles.destroy();
+  if(weeksList.length){
+    const wMiles=weeksList.map(([wk,wEvs])=>{
+      const wDays=new Set(wEvs.filter(e=>e.type==='income').map(e=>e.date)).size;
+      const wMi=wEvs.filter(e=>e.type==='income').reduce((s,e)=>s+(e.miles||0),0);
+      return{label:new Date(...wk.split('-').map((v,i)=>i===1?parseInt(v)-1:parseInt(v))).toLocaleDateString('es-US',{month:'short',day:'numeric'}),total:wMi,avg:wDays>0?parseFloat((wMi/wDays).toFixed(1)):0};
+    });
+    cMiles=new Chart(document.getElementById('chart-miles').getContext('2d'),{type:'bar',data:{labels:wMiles.map(w=>w.label),datasets:[{label:'Total millas',data:wMiles.map(w=>w.total),backgroundColor:'rgba(21,101,192,0.5)',borderRadius:4,borderSkipped:false,yAxisID:'y'},{label:'Prom. diario',data:wMiles.map(w=>w.avg),type:'line',borderColor:'#e07b00',backgroundColor:'rgba(224,123,0,0.1)',pointBackgroundColor:'#e07b00',tension:0.3,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,font:{size:11,family:'IBM Plex Mono'},boxWidth:10,boxHeight:10,padding:10}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.raw+(ctx.datasetIndex===1?' mi/día':' mi')}}},scales:{x:{ticks:{color:tc,font:{size:11,family:'IBM Plex Mono'}},grid:{color:gc},border:{color:gc}},y:{ticks:{color:tc,font:{size:11,family:'IBM Plex Mono'},callback:v=>v+' mi'},grid:{color:gc},border:{color:gc},position:'left'},y1:{ticks:{color:'#e07b00',font:{size:11,family:'IBM Plex Mono'},callback:v=>v+' mi'},grid:{display:false},position:'right'}}}});
+  }
+
+  // Best day of week
+  const dayNames=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const platDefs=[{k:'spark',l:'Spark Drive',color:'var(--spark)'},{k:'flex',l:'Amazon Flex',color:'var(--flex)'},{k:'door',l:'DoorDash',color:'var(--door)'}];
+  const bdEl=document.getElementById('st-best-days');let bdHtml='';
+  platDefs.forEach(p=>{
+    const totals=Array(7).fill(0),counts=Array(7).fill(0);
+    incomeEvs.filter(e=>e.platform===p.k).forEach(e=>{const[y,m,d]=e.date.split('-').map(Number);let dow=new Date(y,m-1,d).getDay();dow=dow===0?6:dow-1;totals[dow]+=e.amount;counts[dow]++;});
+    const avgs=totals.map((t,i)=>counts[i]>0?t/counts[i]:0);
+    const maxAvg=Math.max(...avgs);if(maxAvg===0)return;
+    const bestIdx=avgs.indexOf(maxAvg);
+    bdHtml+='<div style="padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:600;color:'+p.color+'">'+p.l+'</span><span style="font-size:11px;color:var(--text3);font-family:var(--font-mono)">mejor: <strong style="color:'+p.color+'">'+dayNames[bestIdx]+'</strong> prom. '+fm(maxAvg)+'</span></div>'+
+    '<div style="display:flex;gap:4px">'+avgs.map((a,i)=>{const h=maxAvg>0?Math.round((a/maxAvg)*32):0;return '<div style="flex:1;text-align:center"><div style="height:'+h+'px;min-height:2px;background:'+(a>0?(i===bestIdx?p.color:'rgba(0,0,0,0.08)'):'transparent')+';border-radius:2px;margin-bottom:3px"></div><div style="font-size:9px;color:'+(i===bestIdx?p.color:'var(--text3)')+';font-family:var(--font-mono);font-weight:'+(i===bestIdx?'600':'400')+'">'+dayNames[i]+'</div></div>';}).join('')+'</div></div>';
+  });
+  bdEl.innerHTML=bdHtml||'<div class="empty"><p>Sin datos suficientes</p></div>';
+
+  // ── TREND CHART: weekly bruto grouped by month ────────────────────
+  const weeksList2=getWeeks().slice(0,16).reverse();
+  // Group weeks into months for coloring
+  const monthColors=['#1565c0','#2e7d32','#c62828','#5e35b1','#00838f','#e07b00'];
+  const monthIdx={};let mci=0;
+  weeksList2.forEach(([wk])=>{const m=wk.slice(0,7);if(monthIdx[m]===undefined){monthIdx[m]=mci++;} });
+  const trendData=weeksList2.map(([wk,we])=>({
+    label:new Date(...wk.split('-').map((v,i)=>i===1?parseInt(v)-1:parseInt(v))).toLocaleDateString('es-US',{month:'short',day:'numeric'}),
+    gross:we.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0),
+    month:wk.slice(0,7)
+  }));
+  const prevMonth=trendData.length>0?trendData[Math.max(0,trendData.length-5)].month:null;
+  const curMonthKey=todayStr().slice(0,7);
+  let cTrend=window._cTrend;if(cTrend)cTrend.destroy();
+  if(trendData.length){
+    window._cTrend=new Chart(document.getElementById('chart-trend').getContext('2d'),{
+      type:'line',
+      data:{
+        labels:trendData.map(w=>w.label),
+        datasets:[{
+          label:'Bruto semanal',
+          data:trendData.map(w=>w.gross),
+          borderColor:trendData.map(w=>w.month===curMonthKey?'#2e7d32':'#1565c0'),
+          backgroundColor:'rgba(21,101,192,0.05)',
+          pointBackgroundColor:trendData.map(w=>w.month===curMonthKey?'#2e7d32':'#1565c0'),
+          pointRadius:5,pointHoverRadius:7,
+          tension:0.3,fill:true,
+          segment:{borderColor:ctx=>trendData[ctx.p1DataIndex]?.month===curMonthKey?'#2e7d32':'#1565c0'}
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>' '+fm(ctx.raw)}},
+          annotation:{annotations:{}}
+        },
+        scales:{
+          x:{ticks:{color:tc,font:{size:11,family:'IBM Plex Mono'}},grid:{color:gc},border:{color:gc}},
+          y:{ticks:{color:tc,font:{size:11,family:'IBM Plex Mono'},callback:v=>'$'+v.toLocaleString('en-US')},grid:{color:gc},border:{color:gc}}
+        }
+      }
+    });
+  }
+
+  // ── BEST ABSOLUTE DAYS ────────────────────────────────────────────
+  const byDate2=groupByDate();
+  const dayTotals=Object.entries(byDate2).map(([date,evs])=>({
+    date,gross:evs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0)
+  })).filter(d=>d.gross>0).sort((a,b)=>b.gross-a.gross).slice(0,10);
+
+  const bdAbsEl=document.getElementById('st-best-absolute');
+  if(!dayTotals.length){bdAbsEl.innerHTML='<div class="empty"><p>Sin datos</p></div>';}
+  else{
+    bdAbsEl.innerHTML='<table class="etable"><thead><tr><th>#</th><th>Fecha</th><th>Plataformas</th><th>Bruto</th></tr></thead><tbody>'+
+    dayTotals.map((d,i)=>{
+      const plats=[...new Set(byDate2[d.date].filter(e=>e.type==='income').map(e=>e.platform))];
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':''+(i+1)+'';
+      return '<tr><td style="text-align:center">'+medal+'</td><td style="white-space:nowrap">'+fmtDate(d.date)+'</td><td>'+plats.map(p=>'<span class="tag t'+p.charAt(0)+'">'+PLAT_LABELS[p]+'</span>').join('')+'</td><td style="font-weight:700;color:var(--green)">'+fm(d.gross)+'</td></tr>';
+    }).join('')+'</tbody></table>';
+  }
+}
+
+// ── VEHICLE ───────────────────────────────────────────────────────────
+const MAINT_LABELS={oil:'Cambio de aceite',tires:'Llantas',brakes:'Frenos',battery:'Batería',ac:'Aire acondicionado',filter:'Filtros',transmission:'Transmisión',wash:'Lavado / detalle',inspection:'Inspección',other:'Otro'};
+const MAINT_COLORS={oil:'#e07b00',tires:'#1565c0',brakes:'#c62828',battery:'#5e35b1',ac:'#00838f',filter:'#2e7d32',transmission:'#4e342e',wash:'#0288d1',inspection:'#546e7a',other:'#78909c'};
+const goVehicle=()=>showPage('vehicle');
+
+function saveVehicleSettings(){
+  vehicleSettings.odometer=parseFloat(document.getElementById('v-odometer').value)||0;
+  vehicleSettings.gasPrice=parseFloat(document.getElementById('v-gas-price').value)||3.50;
+  saveVehicleSt();save();
+  const totalMiles=events.filter(e=>e.type==='income').reduce((s,e)=>s+(e.miles||0),0);
+  document.getElementById('v-miles-added').textContent='Millas registradas en la app: '+totalMiles.toFixed(0);
+}
+function renderVehicle(){
+  document.getElementById('v-odometer').value=vehicleSettings.odometer||'';
+  document.getElementById('v-gas-price').value=vehicleSettings.gasPrice||'';
+  const totalMiles=events.filter(e=>e.type==='income').reduce((s,e)=>s+(e.miles||0),0);
+  document.getElementById('v-miles-added').textContent='Millas registradas en la app: '+totalMiles.toFixed(0);
+  const totalSpent=maintRecords.reduce((s,r)=>s+r.cost,0);
+  document.getElementById('v-total-spent').textContent=fm(totalSpent);
+  document.getElementById('v-count').textContent=maintRecords.length;
+  if(maintRecords.length){
+    const sorted=[...maintRecords].sort((a,b)=>b.date.localeCompare(a.date));
+    document.getElementById('v-last-service').textContent=fmtDate(sorted[0].date);
+    document.getElementById('v-last-type').textContent=MAINT_LABELS[sorted[0].type]||sorted[0].type;
+  } else {document.getElementById('v-last-service').textContent='—';document.getElementById('v-last-type').textContent='sin registros';}
+  renderServiceAlerts('v-alerts');
+  const list=document.getElementById('v-maint-list');
+  if(!maintRecords.length){list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 17H3v-4l2-5h14l2 5v4h-2M5 17a2 2 0 104 0M15 17a2 2 0 104 0"/></svg><p>No hay registros de mantenimiento</p></div>';return;}
+  const sorted=[...maintRecords].sort((a,b)=>b.date.localeCompare(a.date));
+  const odo=vehicleSettings.odometer||0;
+  list.innerHTML='<table class="etable"><thead><tr><th>Fecha</th><th>Tipo</th><th>Odómetro</th><th>Costo</th><th>Próximo servicio</th><th></th></tr></thead><tbody>'+
+    sorted.map(r=>{
+      let nextParts=[];
+      if(r.intervalWeeks>0){const sd=new Date(r.date+'T12:00:00'),dd=new Date(sd);dd.setDate(dd.getDate()+(r.intervalWeeks*7));const dl=Math.ceil((dd.getTime()-Date.now())/86400000);nextParts.push(dl>0?'en '+dl+' días':'vencido hace '+Math.abs(dl)+' días');}
+      if(r.intervalMiles>0&&r.miles>0&&odo>0){const due=r.miles+r.intervalMiles,left=due-odo;nextParts.push(left>0?'en '+left.toLocaleString()+' mi':left===0?'ahora mismo':'pasado '+Math.abs(left).toLocaleString()+' mi');}
+      const nextTxt=nextParts.length?nextParts.join(' / '):'—';
+      const isOverdue=nextTxt.includes('vencido')||nextTxt.includes('pasado');
+      const nextColor=isOverdue?'color:var(--red)':nextTxt!=='—'?'color:var(--spark)':'color:var(--text3)';
+      return '<tr><td style="white-space:nowrap">'+fmtDate(r.date)+'</td><td><span class="maint-badge" style="background:'+MAINT_COLORS[r.type]+'22;color:'+MAINT_COLORS[r.type]+'">'+(MAINT_LABELS[r.type]||r.type)+'</span></td><td>'+(r.miles?r.miles.toLocaleString():'—')+'</td><td style="color:var(--red);font-weight:600">'+fm(r.cost)+'</td><td style="font-size:12px;font-family:var(--font-mono);'+nextColor+'">'+nextTxt+'</td><td style="white-space:nowrap"><button class="btn-edit" onclick="openMaintModal('+r.id+')" style="margin-right:4px">Editar</button><button class="btn-del" onclick="deleteMaintRecord('+r.id+')">Borrar</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function openMaintModal(id){
+  const modal=document.getElementById('maint-modal');
+  document.getElementById('maint-edit-id').value='';
+  document.getElementById('maint-modal-title').textContent='Nuevo registro de mantenimiento';
+  document.getElementById('maint-date').value=todayStr();
+  document.getElementById('maint-type').value='oil';
+  document.getElementById('maint-cost').value='';
+  document.getElementById('maint-miles').value=vehicleSettings.odometer||'';
+  document.getElementById('maint-interval-miles').value='';
+  document.getElementById('maint-interval-weeks').value='';
+  document.getElementById('maint-notes').value='';
+  if(id){
+    const r=maintRecords.find(r=>r.id===id);
+    if(r){document.getElementById('maint-edit-id').value=id;document.getElementById('maint-modal-title').textContent='Editar registro';document.getElementById('maint-date').value=r.date;document.getElementById('maint-type').value=r.type;document.getElementById('maint-cost').value=r.cost;document.getElementById('maint-miles').value=r.miles||'';document.getElementById('maint-interval-miles').value=r.intervalMiles||'';document.getElementById('maint-interval-weeks').value=r.intervalWeeks||'';document.getElementById('maint-notes').value=r.notes||'';}
+  }
+  modal.classList.add('open');
+}
+function closeMaintModal(){document.getElementById('maint-modal').classList.remove('open');}
+function saveMaintRecord(){
+  const date=document.getElementById('maint-date').value;
+  const cost=parseFloat(document.getElementById('maint-cost').value)||0;
+  if(!date){toast('Selecciona una fecha');return;}
+  if(cost===0){toast('Ingresa el costo');return;}
+  const editId=document.getElementById('maint-edit-id').value;
+  const record={id:editId?parseInt(editId):Date.now(),date,type:document.getElementById('maint-type').value,cost,miles:parseFloat(document.getElementById('maint-miles').value)||0,notes:document.getElementById('maint-notes').value||'',intervalMiles:parseFloat(document.getElementById('maint-interval-miles').value)||0,intervalWeeks:parseFloat(document.getElementById('maint-interval-weeks').value)||0};
+  if(editId){const idx=maintRecords.findIndex(r=>r.id===parseInt(editId));if(idx>-1)maintRecords[idx]=record;toast('Actualizado ✓');}
+  else{maintRecords.unshift(record);toast('Guardado ✓');}
+  saveMaint();save();closeMaintModal();renderVehicle();
+}
+function deleteMaintRecord(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  maintRecords=maintRecords.filter(r=>r.id!==id);saveMaint();save();renderVehicle();toast('Eliminado');
+}
+
+// ── SERVICE ALERTS ────────────────────────────────────────────────────
+function getServiceAlerts(){
+  const alerts=[];const today=new Date();const todayMs=today.getTime();const odo=vehicleSettings.odometer||0;
+  const withIntervals=maintRecords.filter(r=>r.intervalMiles>0||r.intervalWeeks>0);
+  const latestByType={};
+  withIntervals.forEach(r=>{if(!latestByType[r.type]||r.date>latestByType[r.type].date)latestByType[r.type]=r;});
+  Object.values(latestByType).forEach(r=>{
+    const label=MAINT_LABELS[r.type]||r.type;
+    const sd=new Date(r.date+'T12:00:00');
+    let dueByDate=null,dueByMiles=null;
+    if(r.intervalWeeks>0){const dd=new Date(sd);dd.setDate(dd.getDate()+(r.intervalWeeks*7));const dl=Math.ceil((dd.getTime()-todayMs)/86400000);dueByDate={daysLeft:dl};}
+    if(r.intervalMiles>0&&odo>0){const due=(r.miles||0)+r.intervalMiles;const left=due-odo;dueByMiles={milesLeft:left};}
+    const dateOverdue=dueByDate&&dueByDate.daysLeft<=0;
+    const milesOverdue=dueByMiles&&dueByMiles.milesLeft<=0;
+    const dateWarning=dueByDate&&dueByDate.daysLeft>0&&dueByDate.daysLeft<=14;
+    const milesWarning=dueByMiles&&dueByMiles.milesLeft>0&&r.intervalMiles>0&&(dueByMiles.milesLeft/r.intervalMiles)<=0.2;
+    if(!dateOverdue&&!milesOverdue&&!dateWarning&&!milesWarning)return;
+    const status=dateOverdue||milesOverdue?'overdue':'warning';
+    const parts=[];
+    if(dueByDate){if(dateOverdue)parts.push('venció hace '+Math.abs(dueByDate.daysLeft)+' día(s)');else parts.push('faltan '+dueByDate.daysLeft+' día(s)');}
+    if(dueByMiles&&odo>0){if(milesOverdue)parts.push('pasado por '+Math.abs(dueByMiles.milesLeft).toLocaleString()+' millas');else parts.push('faltan '+dueByMiles.milesLeft.toLocaleString()+' millas');}
+    alerts.push({label,status,message:parts.join(' · ')});
+  });
+  return alerts;
+}
+function renderServiceAlerts(containerId){
+  const el=document.getElementById(containerId);if(!el)return;
+  const alerts=getServiceAlerts();
+  if(!alerts.length){el.innerHTML='';return;}
+  el.innerHTML=alerts.map(a=>{
+    const isOverdue=a.status==='overdue';
+    return '<div style="background:'+(isOverdue?'#fff3e0':'#fffde7')+';border:1px solid '+(isOverdue?'#f5a623':'#f9c74f')+';border-radius:var(--r-lg);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+      '<div><div style="font-size:13px;font-weight:600;color:'+(isOverdue?'#e07b00':'#b8860b')+'">'+a.label+(isOverdue?' — VENCIDO':' — próximo servicio')+'</div>'+
+      '<div style="font-size:11px;color:#6b6860;font-family:var(--font-mono);margin-top:2px">'+a.message+'</div></div>'+
+      '<button class="btn-edit" onclick="goVehicle()" style="white-space:nowrap;font-size:11px">Ver</button></div>';
+  }).join('');
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────
+function renderSettings(){
+  document.getElementById('cfg-weekly-goal').value=settings.weeklyGoal||'';
+  document.getElementById('cfg-monthly-goal').value=settings.monthlyGoal||'';
+}
+function saveSettingsForm(){
+  settings.weeklyGoal=parseFloat(document.getElementById('cfg-weekly-goal').value)||0;
+  settings.monthlyGoal=parseFloat(document.getElementById('cfg-monthly-goal').value)||0;
+  saveSettings();save();toast('Configuración guardada ✓');showPage('dashboard');
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────
+function exportCSV(){
+  if(!events.length){toast('No hay datos');return;}
+  const hdr=['Fecha','Tipo','Plataforma','Categoría','Monto','Millas','Notas'];
+  const rows=events.map(e=>[e.date,e.type,e.platform||'',e.category||'',e.amount,e.miles||0,e.notes||''].join(','));
+  const blob=new Blob([[hdr.join(','),...rows].join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gigtracker_'+todayStr()+'.csv';a.click();toast('CSV exportado ✓');
+}
+
+function exportPDF(){
+  const cm=todayStr().slice(0,7);
+  const[y,m]=cm.split('-').map(Number);
+  const monthLabel=new Date(y,m-1,1).toLocaleDateString('es-US',{month:'long',year:'numeric'});
+  const mEvs=events.filter(e=>e.date.startsWith(cm));
+  const gross=mEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const exp=mEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const net=gross-exp;
+  const days=new Set(mEvs.filter(e=>e.type==='income').map(e=>e.date)).size;
+  const miles=mEvs.filter(e=>e.type==='income').reduce((s,e)=>s+(e.miles||0),0);
+  const platTotals={};mEvs.filter(e=>e.type==='income').forEach(e=>{platTotals[e.platform]=(platTotals[e.platform]||0)+e.amount;});
+  const expTotals={};mEvs.filter(e=>e.type==='expense').forEach(e=>{expTotals[e.category]=(expTotals[e.category]||0)+e.amount;});
+  const byDate={};mEvs.forEach(e=>{if(!byDate[e.date])byDate[e.date]=[];byDate[e.date].push(e);});
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>GigTracker — ${monthLabel}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1916;padding:40px;font-size:13px}
+h1{font-size:26px;font-weight:700;margin-bottom:4px}.sub{color:#6b6860;margin-bottom:28px}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}.st{background:#f5f4f0;border-radius:8px;padding:14px}
+.sl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#a09e97;margin-bottom:4px}.sv{font-size:20px;font-weight:700}
+.green{color:#2e7d32}.red{color:#c62828}
+.sec{margin-bottom:24px}.sh{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#a09e97;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #dddbd2}
+.pr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f4f0}.pr:last-child{border-bottom:none}
+table{width:100%;border-collapse:collapse}th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#a09e97;padding:8px 10px;text-align:left;border-bottom:1px solid #dddbd2;font-weight:500}
+td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f5f4f0;font-family:'Courier New',monospace}
+.dh{background:#f5f4f0;padding:8px 10px;font-weight:600;font-size:12px}
+.footer{margin-top:32px;padding-top:16px;border-top:1px solid #dddbd2;color:#a09e97;font-size:11px;display:flex;justify-content:space-between}
+@media print{body{padding:20px}button{display:none}}</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+<div><h1>GigTracker Pro</h1><div class="sub">Reporte — ${monthLabel}</div></div>
+<button onclick="window.print()" style="padding:9px 18px;background:#1a1916;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Imprimir / PDF</button></div>
+<div class="sg">
+<div class="st"><div class="sl">Bruto</div><div class="sv">${fm(gross)}</div></div>
+<div class="st"><div class="sl">Gastos</div><div class="sv red">-${fm(exp)}</div></div>
+<div class="st"><div class="sl">Neto</div><div class="sv ${net>=0?'green':'red'}">${fm(net)}</div></div>
+<div class="st"><div class="sl">Días trabajados</div><div class="sv">${days}</div></div>
+</div>
+<div class="sg" style="grid-template-columns:repeat(2,1fr)">
+<div class="st"><div class="sl">Millas</div><div class="sv">${miles.toFixed(0)}</div></div>
+<div class="st"><div class="sl">Promedio diario bruto</div><div class="sv">${days>0?fm(gross/days):'—'}</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
+<div class="sec"><div class="sh">Plataformas</div>${Object.entries(platTotals).map(([p,a])=>'<div class="pr"><span>'+PLAT_LABELS[p]+'</span><strong>'+fm(a)+'</strong></div>').join('')}</div>
+<div class="sec"><div class="sh">Gastos por categoría</div>${Object.entries(expTotals).map(([c,a])=>'<div class="pr"><span>'+(EXP_CATS[c]?.label||c)+'</span><strong style="color:#c62828">-'+fm(a)+'</strong></div>').join('')||'<div style="color:#a09e97;font-size:12px;padding:8px 0">Sin gastos</div>'}</div>
+</div>
+<div class="sec"><div class="sh">Detalle diario</div>
+<table><thead><tr><th>Tipo</th><th>Descripción</th><th>Monto</th><th>Millas</th></tr></thead><tbody>
+${Object.keys(byDate).sort().flatMap(date=>[
+  '<tr><td colspan="4" class="dh">'+fmtDate(date)+'</td></tr>',
+  ...byDate[date].map(e=>e.type==='income'?
+    '<tr><td style="color:#2e7d32">Ingreso</td><td>'+PLAT_LABELS[e.platform]+'</td><td style="font-weight:600">'+fm(e.amount)+'</td><td>'+(e.miles||0)+'</td></tr>':
+    '<tr><td style="color:#c62828">Gasto</td><td>'+(EXP_CATS[e.category]?.label||e.category)+'</td><td style="color:#c62828;font-weight:600">-'+fm(e.amount)+'</td><td>—</td></tr>')
+]).join('')}
+</tbody></table></div>
+<div class="footer"><span>GigTracker Pro — ${new Date().toLocaleDateString('es-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</span><span>${events.length} registros totales</span></div>
+</body></html>`;
+  const win=window.open('','_blank');win.document.write(html);win.document.close();
+}
+
+// ── MIGRATION FROM OLD FORMAT ─────────────────────────────────────────
+function migrateLocalIfNeeded(){
+  // Check if there's old format data in localStorage
+  const oldSK='gigtracker_v3';
+  const oldData=localStorage.getItem(oldSK);
+  if(!oldData)return;
+  if(localStorage.getItem('gigtracker_migrated_v4'))return;
+  try{
+    const oldEntries=JSON.parse(oldData);
+    if(Array.isArray(oldEntries)&&oldEntries.length>0&&oldEntries[0].spark!==undefined){
+      const migrated=migrateOldEntries(oldEntries);
+      if(migrated.length>0){
+        events=[...migrated,...events.filter(e=>!migrated.find(m=>m.date===e.date))];
+        saveLocal();
+      }
+    }
+  }catch(e){}
+  localStorage.setItem('gigtracker_migrated_v4','1');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+loadLocal();
+loadSettings();
+loadMaint();
+loadVehicle();
+migrateLocalIfNeeded();
+renderDash();
+
+window.addEventListener('load',()=>{
+  updateMobileDriveBar();
+  window.addEventListener('resize',updateMobileDriveBar);
+  if(window.google&&google.accounts){
+    initGDrive();
+  } else {
+    const s=document.querySelector('script[src*="accounts.google.com"]');
+    if(s)s.addEventListener('load',()=>{if(window.google&&google.accounts)initGDrive();});
+  }
+});
+</script>
+</body>
+</html>
