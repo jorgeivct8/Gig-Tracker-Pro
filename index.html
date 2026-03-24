@@ -1174,8 +1174,13 @@ function renderYearSummary(){
   const yearPct=Math.min((dayOfYear/365*100),100).toFixed(0);
 
   const yearStr=String(year);
-  const yearGross=events.filter(e=>e.type==='income'&&e.date.startsWith(yearStr)).reduce((s,e)=>s+e.amount,0);
-  const monthsWithData=new Set(events.filter(e=>e.type==='income'&&e.date.startsWith(yearStr)).map(e=>e.date.slice(0,7))).size;
+  // Support both new format (type:'income') and old format (spark/flex/door fields)
+  const yearGross=events.filter(e=>e.date&&e.date.startsWith(yearStr)).reduce((s,e)=>{
+    if(e.type==='income')return s+e.amount;
+    // old format
+    return s+(e.spark||0)+(e.flex||0)+(e.door||0)+(e.other||0);
+  },0);
+  const monthsWithData=new Set(events.filter(e=>e.date&&e.date.startsWith(yearStr)&&(e.type==='income'||(e.spark||0)+(e.flex||0)+(e.door||0)>0)).map(e=>e.date.slice(0,7))).size;
   const avgPerMonth=monthsWithData>0?yearGross/monthsWithData:0;
   const weeklyAvg=dayOfYear>0?yearGross/(dayOfYear/7):0;
   const projection=weeklyAvg*52;
