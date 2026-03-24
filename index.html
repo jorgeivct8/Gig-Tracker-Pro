@@ -803,10 +803,15 @@ function initGDrive(){
       if(isFirstConnect){
         isFirstConnect=false;
         setDriveStatus('syncing');
-        const loaded=await loadFromDrive();
-        if(loaded){localStorage.setItem('gigtracker_seeded_v1','1');renderDash();}
-        else{await saveToDrive();}
-        setDriveStatus('synced');
+        try{
+          const loaded=await loadFromDrive();
+          if(loaded){localStorage.setItem('gigtracker_seeded_v1','1');renderDash();}
+          else{
+            try{await saveToDrive();}catch(e){/* will retry on next save */}
+          }
+        }catch(e){/* drive load failed, continue with local data */}
+        setDriveStatus(driveReady?'synced':'offline');
+        // Always update UI buttons regardless of errors
         ['drive-signin-btn','drive-signin-btn-mobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
         ['drive-signout-btn','drive-signout-btn-mobile'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='flex';});
         const sb=document.getElementById('sync-btn');if(sb)sb.style.display='block';
