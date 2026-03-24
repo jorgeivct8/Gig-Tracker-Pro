@@ -723,14 +723,21 @@ async function saveToDrive(){
   if(!driveReady||!accessToken)return;
   const body=JSON.stringify({events,settings,maintRecords,vehicleSettings,version:2});
   try{
-    if(!driveFileId){
-      const q=encodeURIComponent('name="'+FILE_NAME+'"');
-      const list=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)&q='+q,{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json());
-      if(list.files&&list.files.length>0)driveFileId=list.files[0].id;
-    }
-    if(driveFileId){
-      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{method:'PATCH',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body});
+    // Always search for the file first to get fresh fileId
+    const q=encodeURIComponent('name="'+FILE_NAME+'"');
+    const list=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)&q='+q,{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json());
+    if(list.files&&list.files.length>0){
+      driveFileId=list.files[0].id;
+      const res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{method:'PATCH',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body});
+      if(!res.ok){
+        // File might be inaccessible, try creating new one
+        driveFileId=null;
+        const meta=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({name:FILE_NAME,parents:['appDataFolder']})}).then(r=>r.json());
+        driveFileId=meta.id;
+        await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{method:'PATCH',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body});
+      }
     } else {
+      // No file exists, create one
       const meta=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({name:FILE_NAME,parents:['appDataFolder']})}).then(r=>r.json());
       driveFileId=meta.id;
       await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{method:'PATCH',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},body});
@@ -1129,6 +1136,58 @@ function renderDash(){
   // Reminder & year
   checkReminder();
   renderYearSummary();
+}
+
+// ── REMINDER BANNER ──────────────────────────────────────────────────
+function checkReminder(){
+  const banner=document.getElementById('reminder-banner');
+  if(!banner)return;
+  const today=todayStr();
+  const dismissed=localStorage.getItem('reminder_dismissed');
+  if(dismissed===today){banner.style.display='none';return;}
+  const incomeEvs=events.filter(e=>e.type==='income');
+  if(!incomeEvs.length){banner.style.display='none';return;}
+  const lastDate=incomeEvs.reduce((max,e)=>e.date>max?e.date:max,'');
+  const hoursAgo=Math.floor((Date.now()-new Date(lastDate+'T12:00:00').getTime())/3600000);
+  if(hoursAgo>=20){
+    banner.style.display='flex';
+    document.getElementById('reminder-title').textContent=lastDate===today?'No has registrado ingresos hoy':'Sin registros desde '+fmtDate(lastDate);
+    document.getElementById('reminder-sub').textContent=hoursAgo<48?'Hace '+hoursAgo+' horas':'Hace '+Math.floor(hoursAgo/24)+' días';
+  } else {
+    banner.style.display='none';
+  }
+}
+function dismissReminder(){
+  localStorage.setItem('reminder_dismissed',todayStr());
+  const banner=document.getElementById('reminder-banner');
+  if(banner)banner.style.display='none';
+}
+
+// ── YEAR SUMMARY ──────────────────────────────────────────────────────
+function renderYearSummary(){
+  const today=new Date();
+  const year=today.getFullYear();
+  const jan1=new Date(year,0,1);
+  const dec31=new Date(year,11,31);
+  const dayOfYear=Math.floor((today-jan1)/86400000)+1;
+  const daysLeft=Math.ceil((dec31-today)/86400000);
+  const yearPct=Math.min((dayOfYear/365*100),100).toFixed(0);
+
+  const yearStr=String(year);
+  const yearGross=events.filter(e=>e.type==='income'&&e.date.startsWith(yearStr)).reduce((s,e)=>s+e.amount,0);
+  const monthsWithData=new Set(events.filter(e=>e.type==='income'&&e.date.startsWith(yearStr)).map(e=>e.date.slice(0,7))).size;
+  const avgPerMonth=monthsWithData>0?yearGross/monthsWithData:0;
+  const weeklyAvg=dayOfYear>0?yearGross/(dayOfYear/7):0;
+  const projection=weeklyAvg*52;
+
+  const yg=document.getElementById('year-gross');if(yg)yg.textContent=fm0(yearGross);
+  const ya=document.getElementById('year-avg-month');if(ya)ya.textContent=fm0(avgPerMonth);
+  const yp=document.getElementById('year-projection');if(yp)yp.textContent=fm0(projection);
+  const ypct=document.getElementById('year-pct');if(ypct)ypct.textContent=yearPct+'%';
+  const ybar=document.getElementById('year-bar');if(ybar)ybar.style.width=yearPct+'%';
+  const ydl=document.getElementById('year-days-left');if(ydl)ydl.textContent=daysLeft+' días restantes';
+  const ynote=document.getElementById('year-projection-note');
+  if(ynote)ynote.textContent=yearGross>0?'A tu ritmo actual de '+fm0(weeklyAvg)+'/semana, proyección anual: '+fm0(projection):'Registra ingresos para ver la proyección';
 }
 
 function goalBarHTML(current,goal,label,color){
