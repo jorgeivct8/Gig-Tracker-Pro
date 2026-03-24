@@ -805,6 +805,18 @@ function initGDrive(){
 }
 function signInDrive(){
   isFirstConnect=true;
+  if(!tokenClient){
+    if(window.google&&window.google.accounts){
+      initGDrive();
+      setTimeout(()=>{
+        if(tokenClient)tokenClient.requestAccessToken({prompt:'select_account'});
+        else toast('Error iniciando Google — recarga la página');
+      },800);
+    } else {
+      toast('Google no cargó — recarga la página');
+    }
+    return;
+  }
   tokenClient.requestAccessToken({prompt:'select_account'});
 }
 function signOutDrive(){
@@ -1654,15 +1666,28 @@ loadVehicle();
 migrateLocalIfNeeded();
 renderDash();
 
+function tryInitGDrive(){
+  if(window.google&&window.google.accounts&&window.google.accounts.oauth2){
+    initGDrive();
+  }
+}
 window.addEventListener('load',()=>{
   updateMobileDriveBar();
   window.addEventListener('resize',updateMobileDriveBar);
-  if(window.google&&google.accounts){
-    initGDrive();
-  } else {
-    const s=document.querySelector('script[src*="accounts.google.com"]');
-    if(s)s.addEventListener('load',()=>{if(window.google&&google.accounts)initGDrive();});
-  }
+  tryInitGDrive();
+  // Also listen for GSI script load
+  const s=document.querySelector('script[src*="accounts.google.com"]');
+  if(s)s.addEventListener('load',tryInitGDrive);
+  // Fallback: poll for 10 seconds
+  let attempts=0;
+  const poll=setInterval(()=>{
+    attempts++;
+    if(window.google&&window.google.accounts&&window.google.accounts.oauth2){
+      tryInitGDrive();
+      clearInterval(poll);
+    }
+    if(attempts>=20)clearInterval(poll);
+  },500);
 });
 </script>
 </body>
