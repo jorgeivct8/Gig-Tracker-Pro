@@ -718,6 +718,7 @@ function setDriveStatus(s){
   const el=document.getElementById('drive-status');if(el){el.textContent=txt;el.style.color=col;}
   const em=document.getElementById('drive-status-mobile');if(em){em.textContent=txt;em.style.color=col;}
 }
+
 async function saveToDrive(){
   if(!driveReady||!accessToken)return;
   const body=JSON.stringify({events,settings,maintRecords,vehicleSettings,version:2});
@@ -736,6 +737,7 @@ async function saveToDrive(){
     }
   }catch(e){driveFileId=null;throw e;}
 }
+
 async function loadFromDrive(){
   if(!driveReady||!accessToken)return false;
   try{
@@ -745,26 +747,35 @@ async function loadFromDrive(){
       driveFileId=list.files[0].id;
       const data=await fetch('https://www.googleapis.com/drive/v3/files/'+driveFileId+'?alt=media',{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json());
       if(data&&data.version===2&&data.events){
-        events=data.events;saveLocal();
-        if(data.settings){settings=Object.assign({weeklyGoal:0,monthlyGoal:0},data.settings);saveSettings();}
-        if(data.maintRecords){maintRecords=data.maintRecords;saveMaint();}
-        if(data.vehicleSettings){vehicleSettings=Object.assign({odometer:0,gasPrice:3.50},data.vehicleSettings);saveVehicleSt();}
+        events=data.events;
+        localStorage.setItem(SK,JSON.stringify(events));
+        if(data.settings){settings=Object.assign({weeklyGoal:0,monthlyGoal:0},data.settings);localStorage.setItem(SK_SETTINGS,JSON.stringify(settings));}
+        if(data.maintRecords){maintRecords=data.maintRecords;localStorage.setItem(SK_MAINT,JSON.stringify(maintRecords));}
+        if(data.vehicleSettings){vehicleSettings=Object.assign({odometer:0,gasPrice:3.50},data.vehicleSettings);localStorage.setItem(SK_VEHICLE,JSON.stringify(vehicleSettings));}
         return true;
       } else if(data&&data.entries){
-        events=migrateOldEntries(data.entries);saveLocal();
-        if(data.settings){settings=Object.assign({weeklyGoal:0,monthlyGoal:0},data.settings);saveSettings();}
-        if(data.maintRecords){maintRecords=data.maintRecords;saveMaint();}
-        if(data.vehicleSettings){vehicleSettings=Object.assign({odometer:0,gasPrice:3.50},data.vehicleSettings);saveVehicleSt();}
+        events=migrateOldEntries(data.entries);
+        localStorage.setItem(SK,JSON.stringify(events));
+        if(data.settings){settings=Object.assign({weeklyGoal:0,monthlyGoal:0},data.settings);localStorage.setItem(SK_SETTINGS,JSON.stringify(settings));}
+        if(data.maintRecords){maintRecords=data.maintRecords;localStorage.setItem(SK_MAINT,JSON.stringify(maintRecords));}
+        if(data.vehicleSettings){vehicleSettings=Object.assign({odometer:0,gasPrice:3.50},data.vehicleSettings);localStorage.setItem(SK_VEHICLE,JSON.stringify(vehicleSettings));}
         return true;
       } else if(Array.isArray(data)){
-        events=migrateOldEntries(data);saveLocal();return true;
+        events=migrateOldEntries(data);
+        localStorage.setItem(SK,JSON.stringify(events));
+        return true;
       }
     }
     return false;
   }catch(e){return false;}
 }
+
+// save() writes to localStorage directly - NO save() calls inside loadFromDrive
 const save=()=>{
-  saveLocal();
+  localStorage.setItem(SK,JSON.stringify(events));
+  localStorage.setItem(SK_SETTINGS,JSON.stringify(settings));
+  localStorage.setItem(SK_MAINT,JSON.stringify(maintRecords));
+  localStorage.setItem(SK_VEHICLE,JSON.stringify(vehicleSettings));
   if(driveReady&&accessToken){
     setDriveStatus('syncing');
     saveToDrive()
@@ -772,13 +783,16 @@ const save=()=>{
       .catch(()=>setDriveStatus('error'));
   }
 };
+
 function scheduleTokenRenewal(){
   if(tokenRenewTimer)clearTimeout(tokenRenewTimer);
   tokenRenewTimer=setTimeout(()=>{
     if(tokenClient&&driveReady)tokenClient.requestAccessToken({prompt:''});
   },50*60*1000);
 }
+
 function initGDrive(){
+  if(tokenClient)return; // already initialized
   tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:CLIENT_ID,scope:SCOPES,
     callback:async(resp)=>{
@@ -803,22 +817,14 @@ function initGDrive(){
     }
   });
 }
+
 function signInDrive(){
   isFirstConnect=true;
-  if(!tokenClient){
-    if(window.google&&window.google.accounts){
-      initGDrive();
-      setTimeout(()=>{
-        if(tokenClient)tokenClient.requestAccessToken({prompt:'select_account'});
-        else toast('Error iniciando Google — recarga la página');
-      },800);
-    } else {
-      toast('Google no cargó — recarga la página');
-    }
-    return;
-  }
-  tokenClient.requestAccessToken({prompt:'select_account'});
+  if(!tokenClient){initGDrive();}
+  if(tokenClient)tokenClient.requestAccessToken({prompt:'select_account'});
+  else toast('Google aún cargando, intenta de nuevo');
 }
+
 function signOutDrive(){
   if(tokenRenewTimer){clearTimeout(tokenRenewTimer);tokenRenewTimer=null;}
   google.accounts.oauth2.revoke(accessToken,()=>{
@@ -830,6 +836,7 @@ function signOutDrive(){
     const sbm=document.getElementById('sync-btn-mobile');if(sbm)sbm.style.display='none';
   });
 }
+
 async function syncFromDrive(){
   if(!driveReady||!accessToken){toast('Conecta Drive primero');return;}
   setDriveStatus('syncing');
@@ -847,6 +854,7 @@ async function syncFromDrive(){
     setDriveStatus('synced');
   }catch(e){toast('Error al sincronizar');setDriveStatus('error');}
 }
+
 function isMobile(){return window.innerWidth<=700;}
 function updateMobileDriveBar(){
   const bar=document.getElementById('mobile-drive-bar');if(!bar)return;
@@ -1666,28 +1674,26 @@ loadVehicle();
 migrateLocalIfNeeded();
 renderDash();
 
-function tryInitGDrive(){
-  if(window.google&&window.google.accounts&&window.google.accounts.oauth2){
-    initGDrive();
-  }
-}
 window.addEventListener('load',()=>{
   updateMobileDriveBar();
   window.addEventListener('resize',updateMobileDriveBar);
-  tryInitGDrive();
-  // Also listen for GSI script load
-  const s=document.querySelector('script[src*="accounts.google.com"]');
-  if(s)s.addEventListener('load',tryInitGDrive);
-  // Fallback: poll for 10 seconds
-  let attempts=0;
-  const poll=setInterval(()=>{
-    attempts++;
-    if(window.google&&window.google.accounts&&window.google.accounts.oauth2){
-      tryInitGDrive();
-      clearInterval(poll);
+  // Init Google Drive when GSI is ready
+  if(window.google&&window.google.accounts&&window.google.accounts.oauth2){
+    initGDrive();
+  } else {
+    const s=document.querySelector('script[src*="accounts.google.com"]');
+    if(s){
+      s.addEventListener('load',()=>{
+        if(window.google&&window.google.accounts)initGDrive();
+      });
     }
-    if(attempts>=20)clearInterval(poll);
-  },500);
+    // Fallback poll
+    let n=0;
+    const t=setInterval(()=>{
+      if(window.google&&window.google.accounts&&window.google.accounts.oauth2){initGDrive();clearInterval(t);}
+      if(++n>20)clearInterval(t);
+    },500);
+  }
 });
 </script>
 </body>
