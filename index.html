@@ -1147,26 +1147,32 @@ function renderDash(){
 
 // ── ROLLOVER CALCULATION ──────────────────────────────────────────────
 function calcWeeklyRollover(){
-  // Only look at the immediately previous week
+  // Rollover starts from next week — current week always uses base goal
+  // The rollover from THIS week will apply NEXT week
   if(!settings.weeklyGoal)return 0;
+  // Check if rollover is activated (starts from next week after today)
+  const rolloverStartWk=settings.rolloverWeekStart||'';
   const curWk=getWeekKey(todayStr());
+  // If no start set, or current week is before/at start, no rollover yet
+  if(!rolloverStartWk||curWk<=rolloverStartWk)return 0;
+  // Find the immediately previous week
   const weeks=getWeeks();
-  // Find the week just before current
   const pastWeeks=weeks.filter(([wk])=>wk<curWk).sort((a,b)=>b[0].localeCompare(a[0]));
   if(!pastWeeks.length)return 0;
   const [,prevEvs]=pastWeeks[0];
   const gross=prevEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const exp=prevEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
   const net=gross-exp;
-  return net-settings.weeklyGoal; // positive=surplus, negative=deficit
+  return net-settings.weeklyGoal;
 }
 
 function calcMonthlyRollover(){
-  // Only look at the immediately previous month
+  // Rollover starts from next month
   if(!settings.monthlyGoal)return 0;
-  const today=todayStr();
-  const [y,m]=today.slice(0,7).split('-').map(Number);
-  // Previous month
+  const rolloverStartMonth=settings.rolloverMonthStart||'';
+  const curMonth=todayStr().slice(0,7);
+  if(!rolloverStartMonth||curMonth<=rolloverStartMonth)return 0;
+  const [y,m]=curMonth.split('-').map(Number);
   const prevM=m===1?12:m-1;
   const prevY=m===1?y-1:y;
   const prevKey=prevY+'-'+String(prevM).padStart(2,'0');
@@ -1175,7 +1181,7 @@ function calcMonthlyRollover(){
   const gross=prevEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const exp=prevEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
   const net=gross-exp;
-  return net-settings.monthlyGoal; // positive=surplus, negative=deficit
+  return net-settings.monthlyGoal;
 }
 
 // ── REMINDER BANNER ──────────────────────────────────────────────────
@@ -1696,6 +1702,9 @@ function renderSettings(){
 function saveSettingsForm(){
   settings.weeklyGoal=parseFloat(document.getElementById('cfg-weekly-goal').value)||0;
   settings.monthlyGoal=parseFloat(document.getElementById('cfg-monthly-goal').value)||0;
+  // Set rollover start to current week/month so rollover only kicks in from next period
+  if(!settings.rolloverWeekStart) settings.rolloverWeekStart=getWeekKey(todayStr());
+  if(!settings.rolloverMonthStart) settings.rolloverMonthStart=todayStr().slice(0,7);
   saveSettings();save();toast('Configuración guardada ✓');showPage('dashboard');
 }
 
@@ -1792,6 +1801,12 @@ loadSettings();
 loadMaint();
 loadVehicle();
 migrateLocalIfNeeded();
+// Initialize rollover start dates if goals exist but no start date set
+if((settings.weeklyGoal||settings.monthlyGoal)&&!settings.rolloverWeekStart){
+  settings.rolloverWeekStart=getWeekKey(todayStr());
+  settings.rolloverMonthStart=todayStr().slice(0,7);
+  saveSettings();
+}
 renderDash();
 
 window.addEventListener('load',()=>{
