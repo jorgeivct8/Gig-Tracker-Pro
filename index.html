@@ -1147,39 +1147,35 @@ function renderDash(){
 
 // ── ROLLOVER CALCULATION ──────────────────────────────────────────────
 function calcWeeklyRollover(){
-  // Sum up surplus/deficit from all past weeks
+  // Only look at the immediately previous week
   if(!settings.weeklyGoal)return 0;
-  const weeks=getWeeks();
   const curWk=getWeekKey(todayStr());
-  let rollover=0;
-  weeks.forEach(([wk,wEvs])=>{
-    if(wk===curWk)return; // skip current week
-    const gross=wEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
-    const exp=wEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
-    const net=gross-exp;
-    rollover+=net-settings.weeklyGoal;
-  });
-  return rollover;
+  const weeks=getWeeks();
+  // Find the week just before current
+  const pastWeeks=weeks.filter(([wk])=>wk<curWk).sort((a,b)=>b[0].localeCompare(a[0]));
+  if(!pastWeeks.length)return 0;
+  const [,prevEvs]=pastWeeks[0];
+  const gross=prevEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const exp=prevEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const net=gross-exp;
+  return net-settings.weeklyGoal; // positive=surplus, negative=deficit
 }
 
 function calcMonthlyRollover(){
-  // Sum up surplus/deficit from all past months
+  // Only look at the immediately previous month
   if(!settings.monthlyGoal)return 0;
-  const curMonth=todayStr().slice(0,7);
-  const months={};
-  events.forEach(e=>{
-    const m=e.date.slice(0,7);
-    if(m>=curMonth)return; // skip current month
-    if(!months[m])months[m]={gross:0,exp:0};
-    if(e.type==='income')months[m].gross+=e.amount;
-    if(e.type==='expense')months[m].exp+=e.amount;
-  });
-  let rollover=0;
-  Object.values(months).forEach(m=>{
-    const net=m.gross-m.exp;
-    rollover+=net-settings.monthlyGoal;
-  });
-  return rollover;
+  const today=todayStr();
+  const [y,m]=today.slice(0,7).split('-').map(Number);
+  // Previous month
+  const prevM=m===1?12:m-1;
+  const prevY=m===1?y-1:y;
+  const prevKey=prevY+'-'+String(prevM).padStart(2,'0');
+  const prevEvs=events.filter(e=>e.date.startsWith(prevKey));
+  if(!prevEvs.length)return 0;
+  const gross=prevEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+  const exp=prevEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const net=gross-exp;
+  return net-settings.monthlyGoal; // positive=surplus, negative=deficit
 }
 
 // ── REMINDER BANNER ──────────────────────────────────────────────────
