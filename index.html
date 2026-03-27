@@ -1066,16 +1066,23 @@ function renderDash(){
   document.getElementById('d-days-week').textContent=workedDaysWk+' día(s) trabajado(s)';
   document.getElementById('dash-wk-label').textContent=getWeekLabel(wk);
 
-  // Goals
+  // Goals with rollover (neto)
   const gr=document.getElementById('dash-goals-row');
   if(settings.weeklyGoal>0||settings.monthlyGoal>0){
     gr.style.display='grid';
     let html='';
-    if(settings.weeklyGoal>0)html+=goalBarHTML(grossWeek,settings.weeklyGoal,'Meta semanal bruto','#1565c0');
+    if(settings.weeklyGoal>0){
+      const netWeek=weekEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0)-expWeek;
+      const wRollover=calcWeeklyRollover();
+      html+=goalBarHTML(netWeek,settings.weeklyGoal,'Meta semanal neto','#1565c0',wRollover);
+    }
     if(settings.monthlyGoal>0){
       const cm=today.slice(0,7);
-      const nm=events.filter(e=>e.type==='income'&&e.date.startsWith(cm)).reduce((s,e)=>s+e.amount,0);
-      html+=goalBarHTML(nm,settings.monthlyGoal,'Meta mensual bruto','#5e35b1');
+      const mGross=events.filter(e=>e.type==='income'&&e.date.startsWith(cm)).reduce((s,e)=>s+e.amount,0);
+      const mExp=events.filter(e=>e.type==='expense'&&e.date.startsWith(cm)).reduce((s,e)=>s+e.amount,0);
+      const netMonth=mGross-mExp;
+      const mRollover=calcMonthlyRollover();
+      html+=goalBarHTML(netMonth,settings.monthlyGoal,'Meta mensual neto','#5e35b1',mRollover);
     }
     gr.innerHTML=html;
   } else {gr.style.display='none';}
@@ -1138,6 +1145,43 @@ function renderDash(){
   renderYearSummary();
 }
 
+// ── ROLLOVER CALCULATION ──────────────────────────────────────────────
+function calcWeeklyRollover(){
+  // Sum up surplus/deficit from all past weeks
+  if(!settings.weeklyGoal)return 0;
+  const weeks=getWeeks();
+  const curWk=getWeekKey(todayStr());
+  let rollover=0;
+  weeks.forEach(([wk,wEvs])=>{
+    if(wk===curWk)return; // skip current week
+    const gross=wEvs.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
+    const exp=wEvs.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+    const net=gross-exp;
+    rollover+=net-settings.weeklyGoal;
+  });
+  return rollover;
+}
+
+function calcMonthlyRollover(){
+  // Sum up surplus/deficit from all past months
+  if(!settings.monthlyGoal)return 0;
+  const curMonth=todayStr().slice(0,7);
+  const months={};
+  events.forEach(e=>{
+    const m=e.date.slice(0,7);
+    if(m>=curMonth)return; // skip current month
+    if(!months[m])months[m]={gross:0,exp:0};
+    if(e.type==='income')months[m].gross+=e.amount;
+    if(e.type==='expense')months[m].exp+=e.amount;
+  });
+  let rollover=0;
+  Object.values(months).forEach(m=>{
+    const net=m.gross-m.exp;
+    rollover+=net-settings.monthlyGoal;
+  });
+  return rollover;
+}
+
 // ── REMINDER BANNER ──────────────────────────────────────────────────
 function checkReminder(){
   const banner=document.getElementById('reminder-banner');
@@ -1195,13 +1239,24 @@ function renderYearSummary(){
   if(ynote)ynote.textContent=yearGross>0?'A tu ritmo actual de '+fm0(weeklyAvg)+'/semana, proyección anual: '+fm0(projection):'Registra ingresos para ver la proyección';
 }
 
-function goalBarHTML(current,goal,label,color){
-  const pct=goal>0?Math.min((current/goal)*100,100):0;
-  const over=current>goal&&goal>0;
-  return '<div class="goal-card"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-mono);margin-bottom:6px">'+label+'</div>'+
-    '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px"><span style="font-size:20px;font-weight:700;color:'+(over?'var(--green)':'var(--text)')+'">'+fm(current)+'</span><span style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">meta '+fm(goal)+'</span></div>'+
+function goalBarHTML(current,goal,label,color,rollover){
+  // rollover: positive = carried over surplus (lowers effective goal)
+  //           negative = carried over deficit (raises effective goal)
+  const effectiveGoal=Math.max(0,goal-(rollover||0));
+  const pct=effectiveGoal>0?Math.min((current/effectiveGoal)*100,100):current>0?100:0;
+  const over=current>=effectiveGoal&&effectiveGoal>0||current>0&&effectiveGoal<=0;
+  const surplus=current-effectiveGoal;
+  const rolloverNote=rollover>0?'<span style="color:var(--green)"> (+'+fm(rollover)+' rollover anterior)</span>':
+                     rollover<0?'<span style="color:var(--red)"> ('+fm(rollover)+' pendiente anterior)</span>':'';
+  return '<div class="goal-card">'+
+    '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-mono);margin-bottom:6px">'+label+'</div>'+
+    '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px">'+
+    '<span style="font-size:20px;font-weight:700;color:'+(over?'var(--green)':'var(--text)')+'">'+fm(current)+'</span>'+
+    '<span style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">meta neta '+fm(effectiveGoal)+'</span></div>'+
+    (rollover?'<div style="font-size:10px;font-family:var(--font-mono);margin-bottom:4px">'+rolloverNote+'</div>':'')+
     '<div class="goal-bar-track"><div class="goal-bar-fill" style="width:'+pct.toFixed(0)+'%;background:'+(over?'var(--green)':color)+'"></div></div>'+
-    '<div style="font-size:11px;color:'+(over?'var(--green)':'var(--text3)')+';font-family:var(--font-mono)">'+(over?'Meta superada +'+fm(current-goal):pct.toFixed(0)+'% — faltan '+fm(goal-current))+'</div></div>';
+    '<div style="font-size:11px;color:'+(over?'var(--green)':'var(--text3)')+';font-family:var(--font-mono)">'+
+    (over?(surplus>0?'Superada +'+fm(surplus)+' → rollover próx.':'Meta cumplida ✓'):pct.toFixed(0)+'% — faltan '+fm(effectiveGoal-current))+'</div></div>';
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────
